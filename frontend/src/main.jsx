@@ -1,10 +1,19 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App.jsx';
+
+// ==========================================
+// CYBER-NOC: SEQUÊNCIA DE BOOT DO TERMINAL
+// ==========================================
+console.log(
+  '%c[TermoSync NOC] %cInicializando Núcleo de Telemetria e Sistemas de Segurança...',
+  'color: #10b981; font-weight: 900; font-size: 14px; text-shadow: 0 0 5px #10b981;',
+  'color: #38bdf8; font-size: 12px;'
+);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
   </StrictMode>,
-)
+);

@@ -1,12 +1,12 @@
 /* =========================================
-   VARIÁVEIS GLOBAIS DE COR E TEMA
+   VARIÁVEIS GLOBAIS DE COR E TEMA ULTRA-NOC
    ========================================= */
 :root {
   --bg-color: #f8fafc;
-  --card-bg: rgba(255, 255, 255, 0.65); /* Fundo de vidro translúcido */
+  --card-bg: rgba(255, 255, 255, 0.65);
   --text-main: #1e293b;
   --text-muted: #64748b;
-  --border: rgba(0, 0, 0, 0.06);
+  --border: rgba(0, 0, 0, 0.08);
   --primary: #059669;
   --primary-hover: #047857;
   --secondary: #38bdf8;
@@ -16,24 +16,24 @@
   --warning: #f59e0b;
   --info: #3b82f6;
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
-  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+  --shadow-md: 0 10px 30px -5px rgba(0, 0, 0, 0.08);
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 }
 
 body.dark-theme {
   --bg-color: #0f172a;
-  --card-bg: rgba(30, 41, 59, 0.55); /* Vidro escuro */
+  --card-bg: rgba(15, 23, 42, 0.55);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --border: rgba(255, 255, 255, 0.08);
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
-  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
 body {
   margin: 0;
-  font-family: 'Montserrat';
+  font-family: 'Montserrat', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-color);
@@ -46,22 +46,22 @@ body {
 }
 
 /* =========================================
-   CARTÕES (CARDS) - EFEITO GLASSMORPHISM
+   CARTÕES (CARDS) - PROFUNDIDADE QUÂNTICA
    ========================================= */
 .card {
   background: var(--card-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: var(--shadow-glass);
+  box-shadow: var(--shadow-glass), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   border: 1px solid var(--border);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .grid-cards {
@@ -71,35 +71,59 @@ body {
 }
 
 /* =========================================
-   BOTÕES (BUTTONS) - PREMIUM INTERACTION
+   BOTÕES (CYBER-BUTTONS) - EFEITO SCANNER
    ========================================= */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.6rem 1.2rem;
-  border-radius: 10px; /* Squircle */
-  font-weight: 600;
+  padding: 0.6rem 1.4rem;
+  border-radius: 10px;
+  font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
   outline: none;
-  gap: 6px;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .btn:active {
-  transform: scale(0.96); /* Efeito tátil de clique */
+  transform: scale(0.96);
+}
+
+/* Feixe de luz interno a varrer o botão */
+.btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transition: 0.5s;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.btn:hover::after {
+  left: 150%;
+  transition: 0.6s ease-in-out;
 }
 
 .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   color: white;
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+  box-shadow: 0 4px 15px rgba(5, 150, 105, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
+  box-shadow: 0 8px 25px rgba(5, 150, 105, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
 }
 
@@ -118,15 +142,12 @@ body {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-.btn-icon {
-  padding: 0.5rem;
-  border-radius: 8px;
+.w-100 {
+  width: 100%;
 }
 
-.w-100 { width: 100%; }
-
 /* =========================================
-   FORMULÁRIOS E INPUTS - EFEITO NEON FOCUS
+   FORMULÁRIOS & INPUTS - TERMINAL PROMPT
    ========================================= */
 .form-grid {
   display: grid;
@@ -137,11 +158,11 @@ body {
 label {
   display: block;
   margin-bottom: 0.4rem;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
 input[type="text"],
@@ -153,14 +174,16 @@ input[type="email"],
 select,
 textarea {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(0, 0, 0, 0.02);
   color: var(--text-main);
-  font-family: inherit;
+  font-family: 'Montserrat', monospace;
   font-size: 0.95rem;
+  font-weight: 500;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .dark-theme input,
@@ -169,21 +192,26 @@ textarea {
   background-color: rgba(0, 0, 0, 0.2);
 }
 
-input:focus, select:focus, textarea:focus {
+/* Efeito de expansão inferior (Terminal Line) */
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
-  border-color: var(--primary);
-  background-color: transparent;
-  box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.15); /* Anel de foco suave */
+  background-color: var(--card-bg);
+  border-color: transparent;
+  box-shadow: 0 2px 0 var(--primary), 0 0 15px rgba(5, 150, 105, 0.1);
+  transform: translateY(-1px);
 }
 
-input:disabled, select:disabled {
+input:disabled,
+select:disabled {
   background-color: rgba(0, 0, 0, 0.05);
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 /* =========================================
-   TABELAS (TABLES) - LIMPAS E MODERNAS
+   TABELAS (TABLES)
    ========================================= */
 .table-responsive {
   overflow-x: auto;
@@ -200,9 +228,9 @@ input:disabled, select:disabled {
 .table th {
   padding: 1rem 1.2rem;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   color: var(--text-muted);
   border-bottom: 2px solid var(--border);
   white-space: nowrap;
@@ -215,6 +243,7 @@ input:disabled, select:disabled {
   color: var(--text-main);
   font-size: 0.9rem;
   transition: background-color 0.2s ease;
+  font-weight: 500;
 }
 
 .table tbody tr:hover td {
@@ -230,14 +259,14 @@ input:disabled, select:disabled {
 }
 
 /* =========================================
-   MODAIS GLOBAIS (SOBREPOSIÇÃO E ANIMAÇÃO)
+   MODAIS (EFEITO "HUD UNFOLD")
    ========================================= */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px); /* Desfoque do fundo do sistema */
-  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(2, 6, 23, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -248,26 +277,46 @@ input:disabled, select:disabled {
 
 .modal-content {
   background: var(--card-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-radius: 16px;
   padding: 2rem;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   border: 1px solid var(--border);
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   max-height: 90vh;
   overflow-y: auto;
+  /* Animação HUD de abertura */
+  animation: hudUnfold 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: center center;
+}
+
+@keyframes hudUnfold {
+  0% {
+    transform: scaleY(0.01) scaleX(0.8);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scaleY(1.05) scaleX(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scaleY(1) scaleX(1);
+    opacity: 1;
+  }
 }
 
 .modal-content h3 {
   margin-top: 0;
   color: var(--text-main);
   font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: 900;
   display: flex;
   align-items: center;
+  letter-spacing: -0.5px;
 }
 
 .modal-actions {
@@ -280,7 +329,7 @@ input:disabled, select:disabled {
 }
 
 /* =========================================
-   ESTADOS VAZIOS E UTILITÁRIOS (EMPTY STATES)
+   ESTADOS VAZIOS E UTILITÁRIOS
    ========================================= */
 .empty-state {
   display: flex;
@@ -289,12 +338,14 @@ input:disabled, select:disabled {
   justify-content: center;
   padding: 4rem 2rem;
   text-align: center;
-  background: rgba(0, 0, 0, 0.015);
   border-radius: 16px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, transparent 100%);
   border: 1px dashed var(--border);
 }
 
-.dark-theme .empty-state { background: rgba(255, 255, 255, 0.015); }
+.dark-theme .empty-state {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+}
 
 .flex-header {
   display: flex;
@@ -306,51 +357,90 @@ input:disabled, select:disabled {
 }
 
 /* =========================================
-   ANIMAÇÕES GLOBAIS
+   ANIMAÇÕES GLOBAIS GERAIS
    ========================================= */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-.anim-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-.stagger-1 { animation-delay: 0.1s; }
-.stagger-2 { animation-delay: 0.2s; }
-.stagger-3 { animation-delay: 0.3s; }
+.anim-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 
-/* =========================================
-   SCROLLBAR GLOBAL (BARRA DE ROLAGEM)
-   ========================================= */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.6); }
+.stagger-1 {
+  animation-delay: 0.1s;
+}
 
-/* =========================================
-   CORREÇÃO PARA OS SELETORES (DROPDOWNS)
-   ========================================= */
+.stagger-2 {
+  animation-delay: 0.15s;
+}
+
+.stagger-3 {
+  animation-delay: 0.2s;
+}
+
+/* SCROLLBAR CYBER */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary);
+  box-shadow: 0 0 10px var(--secondary);
+}
+
+/* CORREÇÃO DROPDOWNS */
 option {
-  background-color: #ffffff; /* Fundo branco no tema claro */
-  color: #1e293b; /* Texto escuro */
-  font-weight: 500;
+  background-color: #ffffff;
+  color: #1e293b;
+  font-weight: 600;
 }
 
 .dark-theme option {
-  background-color: #0f172a; /* Fundo escuro (slate) no tema escuro */
-  color: #f8fafc; /* Texto claro */
+  background-color: #0f172a;
+  color: #f8fafc;
 }
 
-/* Opcional: Para o seletor também não ficar branco no tema claro ao clicar */
 select:focus option {
   background-color: var(--bg-color);
 }

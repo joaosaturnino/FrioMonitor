@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Lock, AlertTriangle, WifiOff, Loader2, ArrowRight, Eye, EyeOff, CheckCircle, ArrowLeft } from 'lucide-react';
+import { 
+  User, Lock, AlertTriangle, WifiOff, Loader2, ArrowRight, 
+  Eye, EyeOff, CheckCircle, ArrowLeft, ShieldCheck, Activity, Terminal
+} from 'lucide-react';
 import TermoSyncLogo from '../../components/TermoSyncLogo';
 
 import './Login.css';
@@ -8,15 +11,12 @@ import './Login.css';
 const API_URL = 'http://localhost:3000/api';
 
 export default function Login({ isOffline, isLoginLoading, fazerLogin, loginErro }) {
-  // 1. Estados do Formulário de Login
   const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
-  // 2. Estado de Visualização ('login', 'forgot', 'success')
+  const [capsLockAtivo, setCapsLockAtivo] = useState(false);
   const [view, setView] = useState('login');
   
-  // 3. Estados da Alteração de Senha
   const [resetUser, setResetUser] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,36 +24,47 @@ export default function Login({ isOffline, isLoginLoading, fazerLogin, loginErro
   const [isResetLoading, setIsResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
 
-  const handleLoginSubmit = (e) => {
-    e.preventDefault();
-    fazerLogin(usuario, senha);
+  useEffect(() => {
+    setResetError('');
+    setSenha('');
+    setCapsLockAtivo(false);
+  }, [view]);
+
+  const verificarCapsLock = (e) => {
+    if (e.getModifierState && e.getModifierState('CapsLock')) {
+      setCapsLockAtivo(true);
+    } else {
+      setCapsLockAtivo(false);
+    }
   };
 
-  // Lógica para Guardar a Nova Senha na Base de Dados
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    if (usuario && senha) {
+      fazerLogin(usuario, senha);
+    }
+  };
+
   const handleResetSubmit = async (e) => {
     e.preventDefault();
     setResetError('');
 
+    if (!resetUser || !newPassword || !confirmPassword) {
+      return setResetError('Preencha todos os campos.');
+    }
     if (newPassword !== confirmPassword) {
-      setResetError('As senhas não coincidem.');
-      return;
+      return setResetError('As senhas não coincidem.');
     }
     if (newPassword.length < 6) {
-      setResetError('A senha deve ter pelo menos 6 caracteres.');
-      return;
+      return setResetError('A nova senha deve ter pelo menos 6 caracteres.');
     }
 
     setIsResetLoading(true);
-    
     try {
-      await axios.post(`${API_URL}/reset-password`, { 
-        usuario: resetUser, 
-        novaSenha: newPassword 
-      });
-      // Se tiver sucesso, vai para a tela de confirmação
+      await axios.put(`${API_URL}/usuarios/reset-senha`, { usuario: resetUser, novaSenha: newPassword });
       setView('success');
-    } catch (err) {
-      setResetError(err.response?.data?.error || 'Erro ao comunicar com o servidor.');
+    } catch (error) {
+      setResetError(error.response?.data?.error || 'Erro ao redefinir. Verifique o utilizador.');
     } finally {
       setIsResetLoading(false);
     }
@@ -61,213 +72,223 @@ export default function Login({ isOffline, isLoginLoading, fazerLogin, loginErro
 
   return (
     <div className="login-container">
-      {/* Background Decorativo */}
+      
+      {/* Elementos de Fundo */}
       <div className="login-background-shapes">
-         <div className="shape shape-1"></div>
-         <div className="shape shape-2"></div>
+        <div className="shape shape-1"></div>
+        <div className="shape shape-2"></div>
+        <div className="shape shape-3"></div>
       </div>
 
       <div className="login-box anim-fade-in">
         
-        {/* ======================================================
-            TELA DE LOGIN PADRÃO
-            ====================================================== */}
-        {view === 'login' && (
-          <>
-            <header className="login-header stagger-1">
-              <div className="login-logo-wrapper">
-                <TermoSyncLogo size={48} color="var(--primary)" />
-              </div>
-              <h2>TermoSync</h2>
-              <p>Inteligência e controle para a sua refrigeração.</p>
-            </header>
+        {/* Container Isolado para o Scanner (Não corta o formulário) */}
+        <div className="scanner-container">
+          <div className="cyber-scanner"></div>
+        </div>
+        
+        {/* Cabeçalho do Login */}
+        <div className="login-header stagger-1">
+          <div className="logo-wrapper">
+            <TermoSyncLogo size={42} color="var(--primary)" />
+          </div>
+          <h2>TermoSync NOC</h2>
+          <p className="system-status">
+            {isOffline ? (
+              <span className="status-offline"><WifiOff size={14}/> LIGAÇÃO CORTADA</span>
+            ) : (
+              <span className="status-online"><Activity size={14} className="pulse-success-icon"/> SISTEMA ONLINE</span>
+            )}
+          </p>
+        </div>
 
-            <form onSubmit={handleLoginSubmit} className="login-form">
-              <div className="input-with-icon stagger-2">
-                <User size={20} className="input-icon" />
+        {/* --- VISTA: LOGIN PRINCIPAL --- */}
+        {view === 'login' && (
+          <form onSubmit={handleLoginSubmit} className="login-form">
+            
+            {loginErro && (
+              <div className="login-alert error stagger-2">
+                <AlertTriangle size={18} />
+                <span>{loginErro}</span>
+              </div>
+            )}
+            
+            {isOffline && (
+              <div className="login-alert warning stagger-2">
+                <WifiOff size={18} />
+                <span>Modo Offline: Verifique a rede local.</span>
+              </div>
+            )}
+
+            <div className="input-group stagger-2">
+              <label>Credencial de Acesso</label>
+              <div className="input-wrapper">
+                <User size={18} className="input-icon" />
                 <input 
                   type="text" 
-                  placeholder="Usuário" 
-                  value={usuario} 
-                  onChange={(e) => setUsuario(e.target.value)} 
-                  required 
-                  disabled={isOffline || isLoginLoading}
+                  placeholder="ID de Utilizador" 
+                  value={usuario}
+                  onChange={(e) => setUsuario(e.target.value)}
+                  disabled={isLoginLoading || isOffline}
                   autoComplete="username"
+                  required
                 />
               </div>
+            </div>
 
-              <div className="input-with-icon stagger-3">
-                <Lock size={20} className="input-icon" />
+            <div className="input-group stagger-3">
+              <label>Chave de Segurança</label>
+              <div className="input-wrapper">
+                <Lock size={18} className="input-icon" />
                 <input 
                   type={showPassword ? "text" : "password"} 
-                  placeholder="Senha" 
-                  value={senha} 
-                  onChange={(e) => setSenha(e.target.value)} 
-                  required 
-                  disabled={isOffline || isLoginLoading}
+                  placeholder="••••••••" 
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  onKeyUp={verificarCapsLock}
+                  disabled={isLoginLoading || isOffline}
                   autoComplete="current-password"
+                  required
                 />
                 <button 
                   type="button" 
-                  className="password-toggle"
-                  style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                  className="btn-toggle-password" 
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex="-1"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {capsLockAtivo && <span className="caps-warning">CAPS LOCK ATIVO</span>}
+            </div>
 
-              <div className="stagger-3" style={{ width: '100%', textAlign: 'right', marginTop: '-0.5rem' }}>
-                 <button 
-                    type="button" 
-                    onClick={() => {
-                        setView('forgot');
-                        setResetError('');
-                    }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: '600' }}
-                 >
-                   Esqueceu a senha?
-                 </button>
-              </div>
-
-              {loginErro && (
-                <div className="login-error-container stagger-3">
-                  <AlertTriangle size={18} /> {loginErro}
-                </div>
-              )}
-
-              <button 
-                type="submit" 
-                className="btn btn-primary w-100 login-btn stagger-4" 
-                disabled={isOffline || isLoginLoading}
-              >
-                {isOffline ? (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><WifiOff size={20}/> Sistema Offline</span>
-                ) : isLoginLoading ? (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Loader2 size={20} className="spinner"/> A autenticar...</span>
-                ) : (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>Acessar o Sistema <ArrowRight size={18} /></span>
-                )}
+            <div className="forgot-password-row stagger-3">
+              <button type="button" className="btn-link" onClick={() => setView('reset')}>
+                Esqueceu a senha?
               </button>
-            </form>
-          </>
+            </div>
+
+            <button 
+              type="submit" 
+              className="btn btn-primary w-100 login-btn stagger-4" 
+              disabled={isLoginLoading || isOffline || !usuario || !senha}
+            >
+              {isLoginLoading ? (
+                <><Loader2 size={20} className="spinner" /> A AUTENTICAR...</>
+              ) : (
+                <><Terminal size={20} /> INICIAR SESSÃO <ArrowRight size={18} /></>
+              )}
+            </button>
+          </form>
         )}
 
-        {/* ======================================================
-            TELA DE ALTERAÇÃO DE SENHA DIRETA
-            ====================================================== */}
-        {view === 'forgot' && (
-          <div className="anim-fade-in">
-            <header className="login-header stagger-1">
-              <div className="login-logo-wrapper" style={{ background: 'rgba(56, 189, 248, 0.1)' }}>
-                <Lock size={36} color="#38bdf8" />
-              </div>
-              <h2>Nova Senha</h2>
-              <p>Insira o seu usuário e defina a sua nova senha de acesso.</p>
-            </header>
+        {/* --- VISTA: RECUPERAR SENHA --- */}
+        {view === 'reset' && (
+          <form onSubmit={handleResetSubmit} className="login-form">
+            <h3 className="form-title stagger-1"><ShieldCheck size={20}/> Redefinir Credenciais</h3>
+            <p className="form-desc stagger-1">Insira o seu ID e a nova chave de acesso para atualizar a segurança.</p>
 
-            <form onSubmit={handleResetSubmit} className="login-form">
-              <div className="input-with-icon stagger-2">
+            {resetError && (
+              <div className="login-alert error stagger-2">
+                <AlertTriangle size={18} />
+                <span>{resetError}</span>
+              </div>
+            )}
+
+            <div className="input-group stagger-2">
+              <label>ID de Utilizador</label>
+              <div className="input-wrapper">
                 <User size={18} className="input-icon" />
                 <input 
                   type="text" 
-                  placeholder="Usuário" 
-                  value={resetUser} 
-                  onChange={(e) => setResetUser(e.target.value)} 
-                  required 
-                  disabled={isOffline || isResetLoading}
+                  placeholder="O seu utilizador atual" 
+                  value={resetUser}
+                  onChange={(e) => setResetUser(e.target.value)}
+                  disabled={isResetLoading}
+                  required
                 />
               </div>
+            </div>
 
-              <div className="input-with-icon stagger-2">
+            <div className="input-group stagger-3">
+              <label>Nova Chave de Segurança</label>
+              <div className="input-wrapper">
                 <Lock size={18} className="input-icon" />
                 <input 
                   type={showNewPassword ? "text" : "password"} 
-                  placeholder="Nova Senha" 
-                  value={newPassword} 
-                  onChange={(e) => setNewPassword(e.target.value)} 
-                  required 
-                  disabled={isOffline || isResetLoading}
+                  placeholder="Mínimo 6 caracteres" 
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  disabled={isResetLoading}
+                  required
                 />
-                <button type="button" style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }} onClick={() => setShowNewPassword(!showNewPassword)} tabIndex="-1">
+                <button 
+                  type="button" 
+                  className="btn-toggle-password" 
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  tabIndex="-1"
+                >
                   {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+            </div>
 
-              <div className="input-with-icon stagger-2">
+            <div className="input-group stagger-3">
+              <label>Confirmar Nova Chave</label>
+              <div className="input-wrapper">
                 <Lock size={18} className="input-icon" />
                 <input 
                   type={showNewPassword ? "text" : "password"} 
-                  placeholder="Confirme a Nova Senha" 
-                  value={confirmPassword} 
-                  onChange={(e) => setConfirmPassword(e.target.value)} 
-                  required 
-                  disabled={isOffline || isResetLoading}
+                  placeholder="Repita a senha" 
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isResetLoading}
+                  required
                 />
               </div>
+            </div>
 
-              {resetError && (
-                <div className="login-error-container stagger-3">
-                  <AlertTriangle size={18} /> {resetError}
-                </div>
-              )}
+            <button 
+              type="submit" 
+              className="btn btn-primary w-100 login-btn stagger-4" 
+              disabled={isResetLoading || !resetUser || !newPassword || !confirmPassword}
+            >
+              {isResetLoading ? <Loader2 size={20} className="spinner" /> : 'ATUALIZAR ACESSO'}
+            </button>
 
-              <button 
-                type="submit" 
-                className="btn btn-primary w-100 login-btn stagger-3" 
-                style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' }}
-                disabled={isOffline || isResetLoading}
-              >
-                {isResetLoading ? (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Loader2 size={20} className="spinner"/> A guardar...</span>
-                ) : (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>Confirmar Alteração <CheckCircle size={18} /></span>
-                )}
-              </button>
-
-              <button 
-                type="button" 
-                onClick={() => setView('login')}
-                style={{ marginTop: '1rem', background: 'transparent', border: 'none', color: '#94a3b8', width: '100%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-              >
-                <ArrowLeft size={16} /> Voltar ao Login
-              </button>
-            </form>
-          </div>
+            <button type="button" className="btn-back stagger-4" onClick={() => setView('login')}>
+              <ArrowLeft size={16} /> Voltar ao Início
+            </button>
+          </form>
         )}
 
-        {/* ======================================================
-            TELA DE SUCESSO
-            ====================================================== */}
+        {/* --- VISTA: SUCESSO --- */}
         {view === 'success' && (
-          <div className="anim-fade-in" style={{ textAlign: 'center', padding: '1rem 0' }}>
-            <div className="stagger-1" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-              <CheckCircle size={64} color="#10b981" />
+          <div className="success-view anim-fade-in">
+            <div className="stagger-1 success-icon-wrapper">
+              <CheckCircle size={64} className="pulse-success-icon" />
             </div>
-            <h2 className="stagger-2" style={{ color: 'white', fontSize: '1.5rem', marginBottom: '0.8rem' }}>Senha Alterada!</h2>
-            <p className="stagger-3" style={{ color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.5', marginBottom: '2rem' }}>
-              A sua senha foi atualizada com sucesso. Já pode utilizar a sua nova credencial para acessar ao sistema.
+            <h2 className="stagger-2">Protocolo Aceite</h2>
+            <p className="stagger-3">
+              A sua credencial de acesso ao TermoSync foi redefinida. Utilize a nova chave para aceder à matriz.
             </p>
             
             <button 
               type="button" 
               className="btn btn-primary w-100 login-btn stagger-4" 
-              onClick={() => { 
-                  setView('login'); 
-                  setResetUser(''); 
-                  setNewPassword(''); 
-                  setConfirmPassword(''); 
-              }}
+              onClick={() => { setView('login'); setResetUser(''); setNewPassword(''); setConfirmPassword(''); }}
             >
-              Concluir e Fazer Login
+              CONCLUIR E ENTRAR
             </button>
           </div>
         )}
-
-        <footer className="login-footer">
-          &copy; {new Date().getFullYear()} TermoSync - Monitorização RDC
-        </footer>
+      </div>
+      
+      {/* Footer System Info */}
+      <div className="login-footer stagger-4">
+        <span>TermoSync NOC v3.0 Ultra</span>
+        <span className="footer-dot">•</span>
+        <span>Ligação Encriptada (AES-256)</span>
       </div>
     </div>
   );

@@ -1,235 +1,384 @@
-import React, { useState } from 'react';
-import { UserPlus, Wrench, Settings, Users, Edit, X, Save, ShieldAlert, Store, UserCircle, KeyRound, MapPin, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { 
+  UserPlus, Wrench, Settings, Users, Edit, X, Save, 
+  ShieldAlert, Store, UserCircle, KeyRound, MapPin, 
+  Search, Shield, ShieldCheck, Lock
+} from 'lucide-react';
 import './GestaoUsuarios.css';
 
 export default function GestaoUsuarios({ api, showToast, usuariosLista, carregarUsuarios, filiaisDb, setModalConfig }) {
-  const formInicialUsuario = { id: '', usuario: '', senha: '', role: 'LOJA', filial: '', tipo_acesso: 'GERENTE', nome_identidade: '' };
+
+  const formInicialUsuario = {
+    id: '',
+    usuario: '',
+    senha: '',
+    role: 'LOJA',
+    filial: '',
+    tipo_acesso: 'GERENTE',
+    nome: '' 
+  };
+
   const [formUsuario, setFormUsuario] = useState({ ...formInicialUsuario });
   const [modalUsuario, setModalUsuario] = useState(false);
+  
+  const [busca, setBusca] = useState('');
+  const [filtroPrivilegio, setFiltroPrivilegio] = useState('TODOS');
 
   const abrirModalUsuario = (tipoAcesso) => {
-    let roleTarget = 'LOJA'; if (tipoAcesso === 'TECNICO') roleTarget = 'MANUTENCAO'; if (tipoAcesso === 'OUTROS') roleTarget = 'ADMIN';
-    setFormUsuario({ id: '', usuario: '', senha: '', role: roleTarget, filial: '', tipo_acesso: tipoAcesso, nome_identidade: '' }); setModalUsuario(true);
+    let roleTarget = 'LOJA';
+    if (tipoAcesso === 'TECNICO') roleTarget = 'MANUTENCAO';
+    if (tipoAcesso === 'OUTROS') roleTarget = 'ADMIN';
+
+    setFormUsuario({
+      ...formInicialUsuario,
+      role: roleTarget,
+      tipo_acesso: tipoAcesso
+    });
+    setModalUsuario(true);
   };
 
   const salvarUsuario = async (e) => {
     e.preventDefault();
     try {
-      const payload = { usuario: formUsuario.usuario, senha: formUsuario.senha, role: formUsuario.role, filial: formUsuario.role !== 'LOJA' ? 'Todas' : formUsuario.filial, nome_gerente: formUsuario.tipo_acesso === 'GERENTE' ? formUsuario.nome_identidade : null, nome_coordenador: formUsuario.tipo_acesso === 'COORDENADOR' ? formUsuario.nome_identidade : null, nome_tecnico: formUsuario.tipo_acesso === 'TECNICO' ? formUsuario.nome_identidade : null };
-      if (formUsuario.id) { await api.put(`/usuarios/${formUsuario.id}`, payload); showToast('Credencial de acesso atualizada.', 'success'); } 
-      else { if (!formUsuario.senha) return showToast('A palavra-passe é obrigatória para novas contas.', 'error'); await api.post('/usuarios', payload); showToast('Nova identidade registada com sucesso.', 'success'); }
-      setModalUsuario(false); carregarUsuarios();
-    } catch (error) { showToast('Erro: Este Login já se encontra em uso.', 'error'); }
+      const payload = { 
+        usuario: formUsuario.usuario,
+        role: formUsuario.role,
+        nome: formUsuario.nome 
+      };
+      
+      // Restrição física
+      if (formUsuario.role === 'LOJA') payload.filial = formUsuario.filial;
+      else payload.filial = null;
+
+      if (formUsuario.senha) payload.senha = formUsuario.senha;
+
+      // Gravação inteligente nas colunas do seu Banco de Dados
+      if (formUsuario.role === 'MANUTENCAO') {
+        payload.nome_tecnico = formUsuario.nome;
+      } else if (formUsuario.role === 'LOJA') {
+        if (formUsuario.tipo_acesso === 'GERENTE') payload.nome_gerente = formUsuario.nome;
+        else if (formUsuario.tipo_acesso === 'COORDENADOR') payload.nome_coordenador = formUsuario.nome;
+        else payload.nome = formUsuario.nome; // Para outros cargos de loja
+      }
+
+      if (formUsuario.id) {
+        await api.put(`/usuarios/${formUsuario.id}`, payload);
+        showToast('Credencial de acesso atualizada com sucesso.', 'success');
+      } else {
+        if (!payload.senha) return showToast('A senha inicial é obrigatória para novas credenciais.', 'error');
+        await api.post('/usuarios', payload);
+        showToast('Nova identidade provisionada na rede.', 'success');
+      }
+
+      setModalUsuario(false);
+      carregarUsuarios();
+    } catch (err) {
+      showToast('Falha na operação. Verifique se os dados estão corretos.', 'error');
+    }
   };
 
   const pedirExclusaoUsuario = (id, nome) => {
-    setModalConfig({ isOpen: true, title: 'Remover Credencial', message: `Remover o acesso de "${nome}" permanentemente do sistema?`, isPrompt: false, onConfirm: async () => {
-      try { await api.delete(`/usuarios/${id}`); showToast('Acesso revogado.', 'success'); carregarUsuarios(); } catch (e) { showToast('Erro ao remover conta.', 'error'); }
-    }});
+    setModalConfig({
+      isOpen: true,
+      title: 'Revogar Credencial',
+      message: `Atenção: Tem a certeza que deseja revogar permanentemente o acesso de "${nome}"? Esta ação eliminará o login do sistema.`,
+      isPrompt: false,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/usuarios/${id}`);
+          showToast('Credencial revogada com sucesso.', 'success');
+          carregarUsuarios();
+        } catch (e) {
+          showToast('Erro ao tentar revogar acesso.', 'error');
+        }
+      }
+    });
   };
 
-  // Função auxiliar para escolher o ícone e a cor do cabeçalho do Modal
-  const getModalHeader = (tipo) => {
-    if (tipo === 'GERENTE') return { icon: <UserPlus size={24} style={{ color: 'var(--primary)' }}/>, title: 'Registar Gerente', color: 'var(--primary)' };
-    if (tipo === 'COORDENADOR') return { icon: <UserPlus size={24} style={{ color: 'var(--info)' }}/>, title: 'Registar Coordenador', color: 'var(--info)' };
-    if (tipo === 'TECNICO') return { icon: <Wrench size={24} style={{ color: 'var(--success)' }}/>, title: 'Registar Técnico', color: 'var(--success)' };
-    return { icon: <ShieldAlert size={24} style={{ color: 'var(--danger)' }}/>, title: 'Registar Administrador', color: 'var(--danger)' };
-  };
+  const usuariosExibidos = useMemo(() => {
+    if (!usuariosLista) return [];
+    
+    return usuariosLista.filter(u => {
+      const displayNome = u.nome || u.nome_tecnico || u.nome_gerente || u.nome_coordenador || u.usuario || '';
+      
+      const matchBusca = 
+        displayNome.toLowerCase().includes(busca.toLowerCase()) ||
+        (u.usuario && u.usuario.toLowerCase().includes(busca.toLowerCase())) ||
+        (u.filial && u.filial.toLowerCase().includes(busca.toLowerCase()));
+      
+      const matchFiltro = filtroPrivilegio === 'TODOS' || u.role === filtroPrivilegio;
+      
+      return matchBusca && matchFiltro;
+    }).sort((a, b) => {
+      const roleWeight = { 'ADMIN': 3, 'MANUTENCAO': 2, 'LOJA': 1 };
+      return (roleWeight[b.role] || 0) - (roleWeight[a.role] || 0);
+    });
+  }, [usuariosLista, busca, filtroPrivilegio]);
 
-  const modalHeaderInfo = getModalHeader(formUsuario.tipo_acesso);
+  const kpis = useMemo(() => {
+    if (!usuariosLista) return { total: 0, admin: 0, tech: 0, loja: 0 };
+    let admin = 0; let tech = 0; let loja = 0;
+    
+    usuariosLista.forEach(u => {
+      if (u.role === 'ADMIN') admin++;
+      else if (u.role === 'MANUTENCAO') tech++;
+      else if (u.role === 'LOJA') loja++;
+    });
+
+    return { total: usuariosLista.length, admin, tech, loja };
+  }, [usuariosLista]);
+
+  const getModalConfigInfo = () => {
+    if (formUsuario.role === 'ADMIN') return { icon: ShieldAlert, color: 'var(--danger)', title: 'Privilégios Master (Admin)' };
+    if (formUsuario.role === 'MANUTENCAO') return { icon: Wrench, color: 'var(--info)', title: 'Acesso Técnico Global' };
+    return { icon: Store, color: 'var(--success)', title: 'Operação Local (Loja)' };
+  };
+  const modalHeaderInfo = getModalConfigInfo();
 
   return (
     <div className="anim-fade-in stagger-1">
-      <div className="flex-header">
-        <h3 className="gestao-usuarios-title">Gestão de Identidades e Acessos</h3>
-        <div className="gestao-usuarios-actions">
-          <button className="btn btn-outline" style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }} onClick={() => abrirModalUsuario('GERENTE')}><UserPlus size={16} /> Novo Gerente</button>
-          <button className="btn btn-outline" style={{ color: 'var(--info)', borderColor: 'var(--info)' }} onClick={() => abrirModalUsuario('COORDENADOR')}><UserPlus size={16} /> Novo Coordenador</button>
-          <button className="btn btn-outline" style={{ color: 'var(--success)', borderColor: 'var(--success)' }} onClick={() => abrirModalUsuario('TECNICO')}><Wrench size={16} /> Novo Técnico</button>
-          <button className="btn btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => abrirModalUsuario('OUTROS')}><ShieldAlert size={16} /> Novo Admin</button>
+      
+      <div className="flex-header iam-header">
+        <div className="iam-title-box">
+          <div className="icon-circle" style={{ background: 'rgba(56, 189, 248, 0.15)', color: 'var(--info)', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+            <KeyRound size={26} />
+          </div>
+          <div>
+            <h3 className="iam-main-title">Controlo de Acessos e Identidade (IAM)</h3>
+            <span className="iam-subtitle">Provisionamento seguro de credenciais, privilégios e revogações.</span>
+          </div>
+        </div>
+
+        <div className="iam-provision-actions">
+          <button className="btn btn-outline tech-btn" onClick={() => abrirModalUsuario('TECNICO')}>
+            <Wrench size={16} /> Emitir Acesso Técnico
+          </button>
+          <button className="btn btn-outline store-btn" onClick={() => abrirModalUsuario('GERENTE')}>
+            <Store size={16} /> Registar Operador
+          </button>
+          <button className="btn btn-danger-outline" onClick={() => abrirModalUsuario('OUTROS')}>
+            <ShieldAlert size={16} /> Provisionar Master
+          </button>
         </div>
       </div>
 
-      {!usuariosLista || usuariosLista.length === 0 ? (
-        <div className="empty-state" style={{ marginTop: '2rem' }}>
-          <Users size={64} color="var(--primary)" style={{ marginBottom: '1rem', opacity: 0.8 }} />
-          <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Nenhuma Conta Registada</h3>
-          <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>Adicione o primeiro utilizador para conceder acesso ao sistema.</p>
+      <div className="iam-control-panel stagger-2">
+        <div className="iam-kpi-bar">
+          <div className="kpi-item-small" onClick={() => setFiltroPrivilegio('TODOS')}>
+            <span className="kpi-val">{kpis.total}</span>
+            <span className="kpi-lbl">Credenciais Ativas</span>
+          </div>
+          <div className={`kpi-item-small danger ${filtroPrivilegio === 'ADMIN' ? 'active' : ''}`} onClick={() => setFiltroPrivilegio('ADMIN')}>
+            <span className="kpi-val">{kpis.admin}</span>
+            <span className="kpi-lbl">Acesso Master</span>
+          </div>
+          <div className={`kpi-item-small info ${filtroPrivilegio === 'MANUTENCAO' ? 'active' : ''}`} onClick={() => setFiltroPrivilegio('MANUTENCAO')}>
+            <span className="kpi-val">{kpis.tech}</span>
+            <span className="kpi-lbl">Equipa Técnica</span>
+          </div>
+          <div className={`kpi-item-small success ${filtroPrivilegio === 'LOJA' ? 'active' : ''}`} onClick={() => setFiltroPrivilegio('LOJA')}>
+            <span className="kpi-val">{kpis.loja}</span>
+            <span className="kpi-lbl">Operadores (Loja)</span>
+          </div>
         </div>
-      ) : (
-        <div className="card table-responsive gestao-usuarios-card">
-          <table className="table">
+
+        <div className="search-box-iam">
+          <Search size={18} color="var(--text-muted)" />
+          <input type="text" placeholder="Pesquisar identidade, login ou filial..." value={busca} onChange={e => setBusca(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="card table-responsive iam-table-card stagger-3">
+        {(!usuariosExibidos || usuariosExibidos.length === 0) ? (
+           <div className="empty-state">
+             <Shield size={48} style={{ opacity: 0.3, marginBottom: '1rem', color: 'var(--text-main)' }} />
+             <h3>Nenhuma credencial localizada</h3>
+             <p>Ajuste os filtros de privilégio ou os termos de pesquisa.</p>
+           </div>
+        ) : (
+          <table className="table iam-table">
             <thead>
               <tr>
-                <th>Utilizador e Credencial</th>
-                <th>Nível de Permissão</th>
-                <th>Âmbito / Cobertura</th>
-                <th>Ações</th>
+                <th>Identidade Operacional</th>
+                <th>Login (Sistema)</th>
+                <th>Privilégio IAM</th>
+                <th>Restrição de Filial</th>
+                <th style={{ textAlign: 'right' }}>Auditoria e Ações</th>
               </tr>
             </thead>
             <tbody>
-              {usuariosLista.map(u => {
-                let displayIdentity = 'Acesso Loja Geral'; 
-                let tipoAcessoReal = 'GERAL';
-                let badgeClass = 'store';
-                let RoleIcon = Store;
-                let roleName = 'Gestor de Loja';
-
-                if (u.role === 'ADMIN') { 
-                  displayIdentity = 'Controlo Total do Sistema'; 
-                  tipoAcessoReal = 'OUTROS'; 
-                  badgeClass = 'admin';
-                  RoleIcon = ShieldAlert;
-                  roleName = 'Admin Master';
-                } else if (u.role === 'MANUTENCAO') { 
-                  displayIdentity = `Identidade: ${u.nome_tecnico || 'Técnico Geral'}`; 
-                  tipoAcessoReal = 'TECNICO'; 
-                  badgeClass = 'tech';
-                  RoleIcon = Wrench;
-                  roleName = 'Manutenção Global';
-                } else if (u.nome_gerente) { 
-                  displayIdentity = `Identidade: Gerente (${u.nome_gerente})`; 
-                  tipoAcessoReal = 'GERENTE'; 
-                } else if (u.nome_coordenador) { 
-                  displayIdentity = `Identidade: Coordenador (${u.nome_coordenador})`; 
-                  tipoAcessoReal = 'COORDENADOR'; 
-                }
+              {usuariosExibidos.map(u => {
                 
-                // Gera a letra do avatar (Primeira letra do utilizador)
-                const avatarLetter = u.usuario.charAt(0).toUpperCase();
-                const avatarColor = u.role === 'ADMIN' ? 'var(--danger)' : (u.role === 'MANUTENCAO' ? 'var(--success)' : 'var(--primary)');
+                // Mapeia inteligentemente o NOME (procura em todas as colunas do seu BD)
+                const displayNome = u.nome || u.nome_tecnico || u.nome_gerente || u.nome_coordenador || u.usuario || 'Sem Nome';
+                
+                // Mapeia inteligentemente o CARGO para exibir na UI
+                let displayCargo = u.cargo;
+                if (!displayCargo) {
+                  if (u.role === 'ADMIN') displayCargo = 'Administrador de Sistema';
+                  else if (u.role === 'MANUTENCAO') displayCargo = 'Técnico de Manutenção';
+                  else if (u.role === 'LOJA') {
+                    if (u.nome_gerente) displayCargo = 'Gerente de Loja';
+                    else if (u.nome_coordenador) displayCargo = 'Coordenador de Loja';
+                    else displayCargo = 'Operador Local';
+                  } else {
+                    displayCargo = 'Utilizador Padrão';
+                  }
+                }
+
+                let roleColor = 'var(--success)'; let roleBg = 'rgba(16, 185, 129, 0.1)'; let roleLabel = 'Operador Local'; let IconLevel = Store;
+                if (u.role === 'ADMIN') { roleColor = 'var(--danger)'; roleBg = 'rgba(239, 68, 68, 0.1)'; roleLabel = 'Acesso Master (L3)'; IconLevel = ShieldAlert; } 
+                else if (u.role === 'MANUTENCAO') { roleColor = 'var(--info)'; roleBg = 'rgba(56, 189, 248, 0.1)'; roleLabel = 'Equipa Técnica (L2)'; IconLevel = Wrench; }
 
                 return (
-                  <tr key={u.id}>
-                    <td data-label="Credencial">
+                  <tr key={u.id} className="iam-table-row">
+                    <td data-label="Identidade">
                       <div className="user-profile-box">
-                        <div className="user-avatar-circle" style={{ backgroundColor: avatarColor }}>
-                          {avatarLetter}
+                        <div className="user-avatar-circle" style={{ background: `linear-gradient(135deg, ${roleColor}, color-mix(in srgb, ${roleColor} 40%, black))` }}>
+                          {displayNome.charAt(0).toUpperCase()}
                         </div>
                         <div className="user-details">
-                          <span className="user-login-name">@{u.usuario}</span>
-                          <span className="user-identity-label">{displayIdentity}</span>
+                          <span className="user-name-table">{displayNome}</span>
+                          <span className="user-role-table">{displayCargo}</span>
                         </div>
                       </div>
                     </td>
                     
-                    <td data-label="Permissão">
-                      <span className={`role-badge ${badgeClass}`}>
-                        <RoleIcon size={14} /> {roleName}
-                      </span>
+                    <td data-label="Login">
+                      <div className="login-badge"><UserCircle size={14} /> @{u.usuario}</div>
                     </td>
                     
-                    <td data-label="Âmbito">
-                      <span className="scope-badge">
-                        <MapPin size={14} style={{ color: 'var(--text-muted)' }}/>
-                        {u.filial}
-                      </span>
+                    <td data-label="Privilégio">
+                      <div className="role-security-badge" style={{ color: roleColor, background: roleBg, border: `1px solid color-mix(in srgb, ${roleColor} 30%, transparent)` }}>
+                        <IconLevel size={14} /> {roleLabel}
+                      </div>
                     </td>
                     
-                    <td data-label="Ações">
-                      <button 
-                        className="btn btn-action edit" 
-                        title="Editar Permissões"
-                        onClick={() => { setFormUsuario({ id: u.id, usuario: u.usuario, senha: '', role: u.role, filial: u.filial, tipo_acesso: tipoAcessoReal, nome_identidade: u.nome_gerente || u.nome_coordenador || u.nome_tecnico || '' }); setModalUsuario(true); }}
-                      >
-                        <Edit size={18} />
+                    <td data-label="Restrição">
+                      {u.role === 'LOJA' ? (
+                        <span className="location-tag restricted"><MapPin size={12}/> {u.filial || 'Sem Filial'}</span>
+                      ) : (
+                        <span className="location-tag global"><Globe2 size={12}/> Acesso Global</span>
+                      )}
+                    </td>
+                    
+                    <td data-label="Ações" style={{ textAlign: 'right' }}>
+                      <button className="btn btn-action edit" onClick={() => { 
+                          // Mapeia o tipo de acesso corretamente para o Select do formulário de Edição
+                          let editTipoAcesso = 'OUTROS';
+                          if (u.role === 'LOJA') {
+                            if (u.nome_gerente) editTipoAcesso = 'GERENTE';
+                            else if (u.nome_coordenador) editTipoAcesso = 'COORDENADOR';
+                          } else if (u.role === 'MANUTENCAO') {
+                            editTipoAcesso = 'TECNICO';
+                          }
+
+                          setFormUsuario({ ...u, nome: displayNome, senha: '', tipo_acesso: editTipoAcesso }); 
+                          setModalUsuario(true); 
+                        }} title="Reconfigurar Permissões">
+                        <Settings size={18} />
                       </button>
-                      <button 
-                        className="btn btn-action delete" 
-                        title="Revogar Acesso"
-                        onClick={() => pedirExclusaoUsuario(u.id, u.usuario)}
-                      >
-                        <X size={18} />
+                      <button className="btn btn-action delete" onClick={() => pedirExclusaoUsuario(u.id, displayNome)} title="Revogar Credencial Permanentemente">
+                        <Lock size={18} />
                       </button>
                     </td>
                   </tr>
-                )
+                );
               })}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
 
       {modalUsuario && (
-        <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '10vh' }}>
-          <div className="modal-content" style={{ maxWidth: '450px', width: '100%' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', color: modalHeaderInfo.color, marginBottom: '1.5rem', marginTop: 0 }}>
-              {modalHeaderInfo.icon}
-              {formUsuario.id ? 'Editar Permissões' : modalHeaderInfo.title}
-            </h3>
+        <div className="modal-overlay">
+          <div className="modal-content iam-modal-content">
             
-            <form onSubmit={salvarUsuario}>
-              <div className="form-grid gestao-usuarios-form-grid">
-                {(formUsuario.tipo_acesso === 'GERENTE' || formUsuario.tipo_acesso === 'COORDENADOR') ? (
-                  <>
+            <div className="iam-modal-header" style={{ borderBottomColor: modalHeaderInfo.color }}>
+              <div className="iam-modal-icon-bg" style={{ background: `color-mix(in srgb, ${modalHeaderInfo.color} 15%, transparent)`, color: modalHeaderInfo.color }}>
+                <modalHeaderInfo.icon size={28} />
+              </div>
+              <div>
+                <h3>Emissão de Credencial</h3>
+                <span style={{ color: modalHeaderInfo.color, fontWeight: '700', fontSize: '0.85rem', textTransform: 'uppercase' }}>
+                  {modalHeaderInfo.title}
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={salvarUsuario} className="iam-modal-form">
+              <div className="form-section-iam">
+                <h4>1. Identificação Operacional</h4>
+                <div className="form-grid">
+                  <div>
+                    <label>Nome Completo (Identidade Oficial)</label>
+                    <input type="text" value={formUsuario.nome} onChange={e => setFormUsuario({ ...formUsuario, nome: e.target.value })} placeholder="Ex: Engenheiro João Silva" required autoFocus />
+                  </div>
+                  {formUsuario.role === 'LOJA' && (
                     <div>
-                      <label>Nome Completo do {formUsuario.tipo_acesso === 'GERENTE' ? 'Gerente' : 'Coordenador'}</label>
-                      <input type="text" value={formUsuario.nome_identidade} onChange={e => setFormUsuario({...formUsuario, nome_identidade: e.target.value})} required autoFocus />
+                      <label>Cargo Local</label>
+                      <select className="select-input w-100" value={formUsuario.tipo_acesso} onChange={e => setFormUsuario({ ...formUsuario, tipo_acesso: e.target.value })} required>
+                        <option value="GERENTE">Gerente de Loja</option>
+                        <option value="COORDENADOR">Coordenador/Subgerente</option>
+                        <option value="OUTROS">Outro Cargo</option>
+                      </select>
                     </div>
+                  )}
+                  {formUsuario.role === 'LOJA' && (
                     <div>
-                      <label>Login (Utilizador de Acesso)</label>
-                      <input type="text" value={formUsuario.usuario} onChange={e => setFormUsuario({...formUsuario, usuario: e.target.value})} placeholder="Ex: joao.gerente" required />
-                    </div>
-                    <div>
-                      <label>Senha {formUsuario.id && <span className="password-hint">(Deixe em branco para manter a atual)</span>}</label>
-                      <input type="password" value={formUsuario.senha} onChange={e => setFormUsuario({...formUsuario, senha: e.target.value})} required={!formUsuario.id} />
-                    </div>
-                    <div>
-                      <label>Vincular à Loja / Filial</label>
-                      <select className="select-input w-100" value={formUsuario.filial} onChange={e => setFormUsuario({...formUsuario, filial: e.target.value})} required>
-                        <option value="">Selecione a Loja associada...</option>
+                      <label>Restrição: Filial Física</label>
+                      <select className="select-input w-100" value={formUsuario.filial} onChange={e => setFormUsuario({ ...formUsuario, filial: e.target.value })} required>
+                        <option value="">Selecione a Filial...</option>
                         {filiaisDb?.map(f => <option key={f} value={f}>{f}</option>)}
                       </select>
                     </div>
-                  </>
-                ) : formUsuario.tipo_acesso === 'TECNICO' ? (
-                  <>
-                    <div>
-                      <label>Nome do Técnico</label>
-                      <input type="text" value={formUsuario.nome_identidade} onChange={e => setFormUsuario({...formUsuario, nome_identidade: e.target.value})} required autoFocus />
+                  )}
+                  {formUsuario.role !== 'LOJA' && (
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div className="global-access-warning">
+                        <ShieldCheck size={16} /> Esta credencial possui alcance global na rede (Sem restrição de filial).
+                      </div>
                     </div>
-                    <div>
-                      <label>Login (Utilizador de Acesso)</label>
-                      <input type="text" value={formUsuario.usuario} onChange={e => setFormUsuario({...formUsuario, usuario: e.target.value})} placeholder="Ex: tec.roberto" required />
-                    </div>
-                    <div>
-                      <label>Senha {formUsuario.id && <span className="password-hint">(Deixe em branco para manter)</span>}</label>
-                      <input type="password" value={formUsuario.senha} onChange={e => setFormUsuario({...formUsuario, senha: e.target.value})} required={!formUsuario.id} />
-                    </div>
-                    <div className="tecnico-warning-box">
-                      <AlertCircle size={24} color="var(--info)" style={{ flexShrink: 0 }} />
-                      <span className="tecnico-warning-text">Os Técnicos de Manutenção possuem permissão nativa para acessar e resolver chamados em <strong>todas as lojas</strong> do sistema.</span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label>Nível de Permissão Máxima</label>
-                      <select className="select-input w-100" value={formUsuario.role} onChange={(e) => setFormUsuario({...formUsuario, role: e.target.value})} required disabled={!!formUsuario.id}>
-                        <option value="ADMIN">Administrador (Controlo Total)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label>Login (Utilizador Root)</label>
-                      <input type="text" value={formUsuario.usuario} onChange={e => setFormUsuario({...formUsuario, usuario: e.target.value})} required autoFocus />
-                    </div>
-                    <div>
-                      <label>Senha Fortificada {formUsuario.id && <span className="password-hint">(Deixe em branco para manter)</span>}</label>
-                      <input type="password" value={formUsuario.senha} onChange={e => setFormUsuario({...formUsuario, senha: e.target.value})} required={!formUsuario.id} />
-                    </div>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
-              <div className="modal-actions gestao-usuarios-modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setModalUsuario(false)}>Cancelar</button>
+
+              <div className="form-section-iam">
+                <h4>2. Autenticação & Segurança</h4>
+                <div className="form-grid">
+                  <div>
+                    <label>Login (Nome de Utilizador)</label>
+                    <input type="text" value={formUsuario.usuario} onChange={e => setFormUsuario({ ...formUsuario, usuario: e.target.value })} placeholder="Ex: jsilva.tech" required />
+                  </div>
+                  <div>
+                    <label>
+                      Chave Criptográfica (Senha) 
+                      {formUsuario.id && <span className="password-hint"> (Deixe em branco para manter a atual)</span>}
+                    </label>
+                    <input type="password" value={formUsuario.senha} onChange={e => setFormUsuario({ ...formUsuario, senha: e.target.value })} placeholder="••••••••" required={!formUsuario.id} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-actions iam-modal-actions">
+                <button type="button" className="btn btn-outline" onClick={() => setModalUsuario(false)}>Abortar Emissão</button>
                 <button type="submit" className="btn btn-primary" style={{ backgroundColor: modalHeaderInfo.color, borderColor: modalHeaderInfo.color, boxShadow: `0 4px 15px color-mix(in srgb, ${modalHeaderInfo.color} 40%, transparent)` }}>
-                  <Save size={18}/> Salvar Credencial
+                  <Save size={18} /> Consolidar Identidade
                 </button>
               </div>
             </form>
+
           </div>
         </div>
       )}
     </div>
   );
 }
+
+const Globe2 = ({ size }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="2" y1="12" x2="22" y2="12"></line>
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+  </svg>
+);

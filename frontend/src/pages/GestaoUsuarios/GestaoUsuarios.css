@@ -1,175 +1,529 @@
 /* =========================================
-   ESTILOS PREMIUM: GESTÃO DE USUÁRIOS
+   ESTILOS PREMIUM: IAM (GESTÃO DE ACESSOS NOC)
    ========================================= */
 
-.gestao-usuarios-title {
-  margin: 0;
+.iam-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.gestao-usuarios-actions {
+.iam-title-box {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.icon-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.iam-main-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+}
+
+.iam-subtitle {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Botões de Ação Específicos */
+.iam-provision-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
+.btn-danger-outline {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(239, 68, 68, 0.05); color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 14px;
+  border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s ease;
+}
+.btn-danger-outline:hover { background: rgba(239, 68, 68, 0.15); border-color: var(--danger); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
+
+.store-btn { color: var(--success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
+.store-btn:hover { background: rgba(16, 185, 129, 0.15); border-color: var(--success); color: var(--success); }
+
+.tech-btn { color: var(--info); border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.05); }
+.tech-btn:hover { background: rgba(56, 189, 248, 0.15); border-color: var(--info); color: var(--info); }
+
 /* =========================================
-   PERFIL E AVATAR NA TABELA
+   PAINEL DE KPIS & FILTROS DE PRIVILÉGIO
    ========================================= */
-.user-profile-box {
+.iam-control-panel {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  background: var(--card-bg);
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+  gap: 1rem;
+  flex-wrap: wrap;
 }
+
+.iam-kpi-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kpi-item-small {
+  display: flex; align-items: center; gap: 8px;
+  background: transparent; border: 1px solid var(--border);
+  padding: 6px 14px; border-radius: 12px; cursor: pointer;
+  transition: 0.2s;
+}
+
+.kpi-val { font-size: 1.1rem; font-weight: 900; color: var(--text-main); font-family: monospace;}
+.kpi-lbl { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;}
+
+.kpi-item-small:hover { background: var(--bg-color); }
+.kpi-item-small.active { background: var(--text-main); border-color: var(--text-main); }
+.kpi-item-small.active .kpi-val, .kpi-item-small.active .kpi-lbl { color: var(--card-bg); }
+
+.kpi-item-small.danger.active { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); }
+.kpi-item-small.danger.active .kpi-val { color: var(--danger); } .kpi-item-small.danger.active .kpi-lbl { color: var(--danger); }
+
+.kpi-item-small.info.active { background: rgba(56, 189, 248, 0.1); border-color: var(--info); }
+.kpi-item-small.info.active .kpi-val { color: var(--info); } .kpi-item-small.info.active .kpi-lbl { color: var(--info); }
+
+.kpi-item-small.success.active { background: rgba(16, 185, 129, 0.1); border-color: var(--success); }
+.kpi-item-small.success.active .kpi-val { color: var(--success); } .kpi-item-small.success.active .kpi-lbl { color: var(--success); }
+
+
+.search-box-iam {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-color); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 14px; min-width: 320px;
+  flex: 1; transition: all 0.3s;
+}
+
+.search-box-iam:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.search-box-iam input {
+  border: none; background: transparent; width: 100%; outline: none;
+  font-family: inherit; font-size: 0.95rem; color: var(--text-main);
+}
+
+/* =========================================
+   TABELA DE IDENTIDADES
+   ========================================= */
+.iam-table-card { margin-top: 1rem; }
+
+.iam-table-row { transition: all 0.2s ease; }
+.iam-table-row:hover td { background-color: rgba(0, 0, 0, 0.015); }
+.dark-theme .iam-table-row:hover td { background-color: rgba(255, 255, 255, 0.015); }
+
+.user-profile-box { display: flex; align-items: center; gap: 12px; }
 
 .user-avatar-circle {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1.1rem;
-  color: white;
-  text-transform: uppercase;
-  flex-shrink: 0;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 1.2rem; color: white;
+  flex-shrink: 0; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
 
-.user-details {
-  display: flex;
-  flex-direction: column;
+.user-details { display: flex; flex-direction: column; }
+.user-name-table { font-weight: 800; font-size: 1.05rem; color: var(--text-main); letter-spacing: -0.3px;}
+.user-role-table { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-top: 2px;}
+
+.login-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg-color); border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 8px; font-family: monospace;
+  font-size: 0.85rem; font-weight: 700; color: var(--text-main);
 }
 
-.user-login-name {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--text-main);
-  letter-spacing: -0.3px;
+.role-security-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px;
+  font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
 }
 
-.user-identity-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin-top: 2px;
+.location-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.8rem; font-weight: 700;
 }
+.location-tag.restricted { color: var(--text-muted); }
+.location-tag.global { color: var(--success); background: rgba(16, 185, 129, 0.1); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.2);}
 
-/* =========================================
-   BADGES DE PERMISSÃO (ROLES)
-   ========================================= */
-.role-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.role-badge.admin {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: var(--danger);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
-.role-badge.tech {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: var(--success);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-}
-
-.role-badge.store {
-  background-color: rgba(56, 189, 248, 0.1);
-  color: var(--info);
-  border: 1px solid rgba(56, 189, 248, 0.2);
-}
-
-/* Badge de Âmbito (Filial) */
-.scope-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background-color: rgba(0, 0, 0, 0.03);
-  border: 1px solid var(--border);
-  color: var(--text-main);
-}
-
-.dark-theme .scope-badge {
-  background-color: rgba(255, 255, 255, 0.03);
-}
-
-/* =========================================
-   BOTÕES DE AÇÃO NA TABELA
-   ========================================= */
+/* Botões de Ação */
 .btn-action {
-  padding: 0.5rem;
-  border-radius: 8px;
-  transition: all 0.2s;
+  background: transparent; border: 1px solid var(--border); padding: 8px; border-radius: 10px;
+  cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center;
 }
+.btn-action.edit { color: var(--text-muted); margin-right: 8px; }
+.btn-action.edit:hover { background: var(--card-bg); color: var(--text-main); border-color: var(--text-main); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 
-.btn-action.edit {
-  color: var(--info);
-  border-color: transparent;
-  background: rgba(59, 130, 246, 0.05);
-  margin-right: 8px;
-}
-
-.btn-action.edit:hover {
-  background: rgba(59, 130, 246, 0.15);
-  transform: translateY(-2px);
-}
-
-.btn-action.delete {
-  color: var(--danger);
-  border-color: transparent;
-  background: rgba(239, 68, 68, 0.05);
-}
-
-.btn-action.delete:hover {
-  background: rgba(239, 68, 68, 0.15);
-  transform: translateY(-2px);
-}
+.btn-action.delete { color: var(--danger); background: rgba(239, 68, 68, 0.05); border-color: transparent;}
+.btn-action.delete:hover { background: rgba(239, 68, 68, 0.15); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.1); }
 
 /* =========================================
-   MODAL DE USUÁRIOS E ALERTAS
+   MODAL DE PROVISIONAMENTO IAM
    ========================================= */
-.gestao-usuarios-form-grid {
-  grid-template-columns: 1fr;
+.iam-modal-content {
+  max-width: 600px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.iam-modal-header {
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border-bottom: 2px solid var(--border);
+  background: rgba(0,0,0,0.01);
+}
+.dark-theme .iam-modal-header { background: rgba(255,255,255,0.01); }
+
+.iam-modal-icon-bg {
+  width: 56px; height: 56px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.iam-modal-header h3 { margin: 0 0 4px 0; font-size: 1.4rem; font-weight: 900; color: var(--text-main); }
+
+.iam-modal-form {
+  padding: 2rem;
+}
+
+.form-section-iam {
+  margin-bottom: 2rem;
+}
+
+.form-section-iam h4 {
+  margin: 0 0 1rem 0; font-size: 0.9rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px dashed var(--border); padding-bottom: 8px;
 }
 
 .password-hint {
-  font-size: 0.75rem;
-  color: var(--warning);
-  margin-left: 5px;
-  font-weight: 600;
-  font-style: italic;
+  font-size: 0.7rem; color: var(--info); font-weight: 700; text-transform: none; font-style: italic; margin-left: 6px;
 }
 
-.tecnico-warning-box {
+.global-access-warning {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; width: 100%;
+}
+
+.iam-modal-actions {
+  margin-top: 1rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
+}
+
+/* =========================================
+   RESPONSIVIDADE DA TABELA (MOBILE)
+   ========================================= */
+@media (max-width: 768px) {
+  .iam-header { flex-direction: column; align-items: stretch; }
+  .iam-provision-actions { flex-direction: column; width: 100%; }
+  .iam-provision-actions button { width: 100%; justify-content: center; }
+  
+  .iam-control-panel { flex-direction: column; align-items: stretch; padding: 15px;}
+  .search-box-iam { width: 100%; min-width: 100%; }
+
+  .iam-table-card .table thead { display: none; }
+  .iam-table-card .table tr {
+    display: block; margin-bottom: 1.5rem; border: 1px solid var(--border);
+    border-radius: 16px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+  }
+  .iam-table-card .table td {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px dashed var(--border); padding: 12px 0; text-align: right; gap: 10px;
+  }
+  .iam-table-card .table td:last-child { border-bottom: none; justify-content: flex-end; }
+  .iam-table-card .table td::before {
+    content: attr(data-label); font-weight: 800; color: var(--text-muted);
+    font-size: 0.75rem; text-transform: uppercase; text-align: left;
+  }
+
+  .iam-modal-form { padding: 1.5rem; }
+  .iam-modal-header { padding: 1.5rem; }
+}/* =========================================
+   ESTILOS PREMIUM: IAM (GESTÃO DE ACESSOS NOC)
+   ========================================= */
+
+.iam-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.iam-title-box {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background-color: rgba(56, 189, 248, 0.1);
-  border-radius: 12px;
-  margin-top: 5px;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  gap: 15px;
 }
 
-.tecnico-warning-text {
+.icon-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.iam-main-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+}
+
+.iam-subtitle {
+  color: var(--text-muted);
   font-size: 0.85rem;
-  color: var(--info);
   font-weight: 600;
-  line-height: 1.4;
+  margin-top: 4px;
+  display: block;
 }
 
-.gestao-usuarios-modal-actions {
-  margin-top: 1.5rem;
+/* Botões de Ação Específicos */
+.iam-provision-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-danger-outline {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(239, 68, 68, 0.05); color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 14px;
+  border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s ease;
+}
+.btn-danger-outline:hover { background: rgba(239, 68, 68, 0.15); border-color: var(--danger); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
+
+.store-btn { color: var(--success); border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
+.store-btn:hover { background: rgba(16, 185, 129, 0.15); border-color: var(--success); color: var(--success); }
+
+.tech-btn { color: var(--info); border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.05); }
+.tech-btn:hover { background: rgba(56, 189, 248, 0.15); border-color: var(--info); color: var(--info); }
+
+/* =========================================
+   PAINEL DE KPIS & FILTROS DE PRIVILÉGIO
+   ========================================= */
+.iam-control-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-bg);
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.iam-kpi-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kpi-item-small {
+  display: flex; align-items: center; gap: 8px;
+  background: transparent; border: 1px solid var(--border);
+  padding: 6px 14px; border-radius: 12px; cursor: pointer;
+  transition: 0.2s;
+}
+
+.kpi-val { font-size: 1.1rem; font-weight: 900; color: var(--text-main); font-family: monospace;}
+.kpi-lbl { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;}
+
+.kpi-item-small:hover { background: var(--bg-color); }
+.kpi-item-small.active { background: var(--text-main); border-color: var(--text-main); }
+.kpi-item-small.active .kpi-val, .kpi-item-small.active .kpi-lbl { color: var(--card-bg); }
+
+.kpi-item-small.danger.active { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); }
+.kpi-item-small.danger.active .kpi-val { color: var(--danger); } .kpi-item-small.danger.active .kpi-lbl { color: var(--danger); }
+
+.kpi-item-small.info.active { background: rgba(56, 189, 248, 0.1); border-color: var(--info); }
+.kpi-item-small.info.active .kpi-val { color: var(--info); } .kpi-item-small.info.active .kpi-lbl { color: var(--info); }
+
+.kpi-item-small.success.active { background: rgba(16, 185, 129, 0.1); border-color: var(--success); }
+.kpi-item-small.success.active .kpi-val { color: var(--success); } .kpi-item-small.success.active .kpi-lbl { color: var(--success); }
+
+
+.search-box-iam {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-color); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 14px; min-width: 320px;
+  flex: 1; transition: all 0.3s;
+}
+
+.search-box-iam:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.search-box-iam input {
+  border: none; background: transparent; width: 100%; outline: none;
+  font-family: inherit; font-size: 0.95rem; color: var(--text-main);
+}
+
+/* =========================================
+   TABELA DE IDENTIDADES
+   ========================================= */
+.iam-table-card { margin-top: 1rem; }
+
+.iam-table-row { transition: all 0.2s ease; }
+.iam-table-row:hover td { background-color: rgba(0, 0, 0, 0.015); }
+.dark-theme .iam-table-row:hover td { background-color: rgba(255, 255, 255, 0.015); }
+
+.user-profile-box { display: flex; align-items: center; gap: 12px; }
+
+.user-avatar-circle {
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 1.2rem; color: white;
+  flex-shrink: 0; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.user-details { display: flex; flex-direction: column; }
+.user-name-table { font-weight: 800; font-size: 1.05rem; color: var(--text-main); letter-spacing: -0.3px;}
+.user-role-table { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-top: 2px;}
+
+.login-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg-color); border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 8px; font-family: monospace;
+  font-size: 0.85rem; font-weight: 700; color: var(--text-main);
+}
+
+.role-security-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px;
+  font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.location-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.8rem; font-weight: 700;
+}
+.location-tag.restricted { color: var(--text-muted); }
+.location-tag.global { color: var(--success); background: rgba(16, 185, 129, 0.1); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.2);}
+
+/* Botões de Ação */
+.btn-action {
+  background: transparent; border: 1px solid var(--border); padding: 8px; border-radius: 10px;
+  cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-action.edit { color: var(--text-muted); margin-right: 8px; }
+.btn-action.edit:hover { background: var(--card-bg); color: var(--text-main); border-color: var(--text-main); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+.btn-action.delete { color: var(--danger); background: rgba(239, 68, 68, 0.05); border-color: transparent;}
+.btn-action.delete:hover { background: rgba(239, 68, 68, 0.15); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.1); }
+
+/* =========================================
+   MODAL DE PROVISIONAMENTO IAM
+   ========================================= */
+.iam-modal-content {
+  max-width: 600px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.iam-modal-header {
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border-bottom: 2px solid var(--border);
+  background: rgba(0,0,0,0.01);
+}
+.dark-theme .iam-modal-header { background: rgba(255,255,255,0.01); }
+
+.iam-modal-icon-bg {
+  width: 56px; height: 56px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.iam-modal-header h3 { margin: 0 0 4px 0; font-size: 1.4rem; font-weight: 900; color: var(--text-main); }
+
+.iam-modal-form {
+  padding: 2rem;
+}
+
+.form-section-iam {
+  margin-bottom: 2rem;
+}
+
+.form-section-iam h4 {
+  margin: 0 0 1rem 0; font-size: 0.9rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px dashed var(--border); padding-bottom: 8px;
+}
+
+.password-hint {
+  font-size: 0.7rem; color: var(--info); font-weight: 700; text-transform: none; font-style: italic; margin-left: 6px;
+}
+
+.global-access-warning {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; width: 100%;
+}
+
+.iam-modal-actions {
+  margin-top: 1rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
+}
+
+/* =========================================
+   RESPONSIVIDADE DA TABELA (MOBILE)
+   ========================================= */
+@media (max-width: 768px) {
+  .iam-header { flex-direction: column; align-items: stretch; }
+  .iam-provision-actions { flex-direction: column; width: 100%; }
+  .iam-provision-actions button { width: 100%; justify-content: center; }
+  
+  .iam-control-panel { flex-direction: column; align-items: stretch; padding: 15px;}
+  .search-box-iam { width: 100%; min-width: 100%; }
+
+  .iam-table-card .table thead { display: none; }
+  .iam-table-card .table tr {
+    display: block; margin-bottom: 1.5rem; border: 1px solid var(--border);
+    border-radius: 16px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+  }
+  .iam-table-card .table td {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px dashed var(--border); padding: 12px 0; text-align: right; gap: 10px;
+  }
+  .iam-table-card .table td:last-child { border-bottom: none; justify-content: flex-end; }
+  .iam-table-card .table td::before {
+    content: attr(data-label); font-weight: 800; color: var(--text-muted);
+    font-size: 0.75rem; text-transform: uppercase; text-align: left;
+  }
+
+  .iam-modal-form { padding: 1.5rem; }
+  .iam-modal-header { padding: 1.5rem; }
 }

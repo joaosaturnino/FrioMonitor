@@ -1,239 +1,439 @@
-import React, { useState, useMemo } from 'react';
-import { Printer, MessageSquarePlus, CheckCircle, Wrench, Save, MapPin, User, AlertCircle, Clock, CheckSquare } from 'lucide-react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
+import { 
+  Printer, MessageSquarePlus, CheckCircle, Wrench, Save, 
+  MapPin, User, Clock, CheckSquare, Archive, 
+  Search, AlertTriangle, Loader2, PlayCircle, Settings
+} from 'lucide-react';
 import './Chamados.css';
 
-export default function Chamados({ 
-  userRole, filialAtiva, nomeLogado, chamados, tecnicosDb, equipamentosDaFilial, 
-  nomeGerente, nomeCoordenador, api, carregarChamados, showToast, isOffline, gerarLoteOS 
-}) {
-  const [tecnicoFiltroOS, setTecnicoFiltroOS] = useState('todos');
-  const [filtroTempoOS, setFiltroTempoOS] = useState('todos');
+// ============================================================================
+// COMPONENTE OTIMIZADO (MEMO): Evita re-renderização desnecessária da lista
+// ============================================================================
+const ChamadoCard = memo(({ c, isOffline, onResolver, onArquivar }) => {
+  const isConcluido = c.status === 'Concluído';
   
-  // Modais
-  const [modalChamado, setModalChamado] = useState(false);
-  const [formChamado, setFormChamado] = useState({ equipamento_id: '', descricao: '', solicitante_nome: '', tecnico_responsavel: '' });
-  
-  const [modalResolver, setModalResolver] = useState({ isOpen: false, chamadoId: null, nota: '' });
-
-  const chamadosAtivosFiltrados = useMemo(() => {
-    const trintaDiasAtras = new Date(); trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
-    let list = chamados.filter(c => c.status !== 'Concluído' || new Date(c.data_conclusao) >= trintaDiasAtras);
-    
-    if (userRole === 'ADMIN' && filialAtiva !== 'Todas') list = list.filter(c => c.filial === filialAtiva);
-    if (userRole === 'MANUTENCAO') list = list.filter(c => c.tecnico_responsavel === nomeLogado);
-    else if (tecnicoFiltroOS !== 'todos') list = list.filter(c => c.tecnico_responsavel === tecnicoFiltroOS);
-    
-    const hoje = new Date();
-    if (filtroTempoOS === 'dia') list = list.filter(c => new Date(c.data_abertura).toDateString() === hoje.toDateString() || (c.data_conclusao && new Date(c.data_conclusao).toDateString() === hoje.toDateString()));
-    else if (filtroTempoOS === 'semana') { const seteDias = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000); list = list.filter(c => new Date(c.data_abertura) >= seteDias || (c.data_conclusao && new Date(c.data_conclusao) >= seteDias)); }
-    else if (filtroTempoOS === 'mes') { const mesAtras = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000); list = list.filter(c => new Date(c.data_abertura) >= mesAtras || (c.data_conclusao && new Date(c.data_conclusao) >= mesAtras)); }
-    return list;
-  }, [chamados, filialAtiva, userRole, nomeLogado, tecnicoFiltroOS, filtroTempoOS]);
-
-  const concluirChamado = async (e) => {
-    e.preventDefault();
-    if (isOffline) return showToast('Ação bloqueada offline.', 'warning');
-    if (!modalResolver.nota.trim()) return showToast('A nota de resolução é obrigatória.', 'warning');
-    
-    try {
-      await api.put(`/chamados/${modalResolver.chamadoId}/status`, { status: 'Concluído', nota_resolucao: modalResolver.nota });
-      showToast('Chamado concluído com sucesso!', 'success');
-      setModalResolver({ isOpen: false, chamadoId: null, nota: '' });
-      carregarChamados();
-    } catch (err) {
-      showToast('Erro ao concluir o chamado.', 'error');
-    }
-  };
+  const urgencyColor = useMemo(() => {
+    if (c.urgencia === 'Alta') return 'var(--danger)';
+    if (c.urgencia === 'Média') return 'var(--warning)';
+    return 'var(--info)';
+  }, [c.urgencia]);
 
   return (
-    <div className="anim-fade-in stagger-1">
-      <div className="flex-header">
-        <h3 style={{ margin: 0 }}>Central de Chamados Técnicos</h3>
-        <div className="action-group">
-          {userRole !== 'MANUTENCAO' && (
-            <select className="select-input chamados-filter-select" value={tecnicoFiltroOS} onChange={e => setTecnicoFiltroOS(e.target.value)}>
-              <option value="todos">Todos os Técnicos</option>
-              {tecnicosDb?.map(tec => <option key={tec.id} value={tec.nome_tecnico}>{tec.nome_tecnico}</option>)}
-            </select>
-          )}
-          <select className="select-input chamados-filter-select" value={filtroTempoOS} onChange={e => setFiltroTempoOS(e.target.value)}>
-            <option value="todos">Todo o Período</option>
-            <option value="dia">Apenas de Hoje</option>
-            <option value="semana">Últimos 7 dias</option>
-            <option value="mes">Últimos 30 dias</option>
-          </select>
-          
-          <button className="btn btn-outline btn-print-os" onClick={() => gerarLoteOS(chamadosAtivosFiltrados?.filter(c => c.status === 'Concluído') || [])}>
-            <Printer size={18} /> Imprimir OS ({(chamadosAtivosFiltrados?.filter(c => c.status === 'Concluído') || []).length})
-          </button>
-          
-          {userRole !== 'MANUTENCAO' && (
-            <button className="btn btn-primary" onClick={() => {
-              if (!equipamentosDaFilial || equipamentosDaFilial.length === 0) return showToast("Não existem equipamentos nesta unidade para abrir um chamado.", "warning");
-              let solicitanteAuto = userRole === 'ADMIN' ? 'Administração Central' : (nomeGerente ? `Gerente - ${nomeGerente}` : (nomeCoordenador ? `Coordenador - ${nomeCoordenador}` : 'Equipe da Loja'));
-              setFormChamado({ equipamento_id: equipamentosDaFilial[0].id, descricao: '', solicitante_nome: solicitanteAuto, tecnico_responsavel: '' }); setModalChamado(true);
-            }}><MessageSquarePlus size={18} /> Abrir Chamado</button>
+    <div 
+      className={`card chamado-card ${isConcluido ? 'concluido' : ''}`}
+      style={{ '--ticket-color': isConcluido ? 'var(--success)' : urgencyColor }}
+    >
+      <div className="chamado-header">
+        <div className="chamado-equip-info">
+          <span className="chamado-equip-nome">{c.equipamento_nome}</span>
+          <span className="chamado-filial"><MapPin size={12}/> {c.filial}</span>
+        </div>
+        
+        <div className="chamado-badges">
+          <span className="badge-status" style={{ 
+            background: isConcluido ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+            color: isConcluido ? 'var(--success)' : 'var(--warning)'
+          }}>
+            {c.status}
+          </span>
+          {!isConcluido && (
+            <span className="badge-urgencia" style={{ color: urgencyColor, border: `1px solid ${urgencyColor}` }}>
+              {c.urgencia}
+            </span>
           )}
         </div>
       </div>
 
-      {!chamadosAtivosFiltrados || chamadosAtivosFiltrados.length === 0 ? (
-        <div className="empty-state" style={{ marginTop: '2rem' }}>
-          <CheckCircle size={64} color="var(--success)" style={{ marginBottom: '1rem', animation: 'pulseSoftGreen 2s infinite' }} />
-          <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Sem Ocorrências Pendentes</h3>
-          <p style={{ color: 'var(--text-muted)' }}>A central de máquinas está saudável ou os filtros não encontram resultados.</p>
+      <div className="chamado-body">
+        <div className="chamado-meta">
+          <span><User size={14} /> Solicitante: {c.solicitante_nome || c.aberto_por}</span>
+          <span><Wrench size={14} /> Técnico: {c.tecnico_responsavel || 'Aguardando Despacho'}</span>
+          <span><Clock size={14} /> Aberto: {new Date(c.data_abertura).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
         </div>
-      ) : (
-        <div className="grid-cards" style={{ marginTop: '1.5rem' }}>
-          {chamadosAtivosFiltrados.map(c => {
-            // Definição da Cor Dinâmica por Urgência / Status
-            let colorTheme = 'var(--info)';
-            if (c.status === 'Concluído') colorTheme = 'var(--success)';
-            else if (c.urgencia === 'Crítica') colorTheme = 'var(--danger)';
-            else if (c.urgencia === 'Alta') colorTheme = '#f97316'; // Laranja
-            else if (c.urgencia === 'Média') colorTheme = 'var(--warning)';
-
-            return (
-              <div key={c.id} className="card chamado-card" style={{ '--ticket-color': colorTheme }}>
-                
-                <div className="chamado-header">
-                  <div className="chamado-equip-title">
-                    <Wrench size={22} color={colorTheme} />
-                    {c.equipamento_nome}
-                  </div>
-                  <span className="chamado-status-badge">{c.status}</span>
-                </div>
-                
-                <div className="chamado-desc-box">
-                  "{c.descricao}"
-                </div>
-                
-                <div className="chamado-meta-grid">
-                  <div className="chamado-meta-item">
-                    <MapPin size={16} /> Loja/Filial: <strong>{c.filial}</strong>
-                  </div>
-                  <div className="chamado-meta-item">
-                    <User size={16} /> Solicitante: <strong>{c.solicitante_nome || c.aberto_por}</strong>
-                  </div>
-                  <div className="chamado-meta-item" style={{ color: c.status !== 'Concluído' ? 'var(--info)' : 'var(--text-muted)' }}>
-                    <Wrench size={16} /> Técnico: <strong>{c.tecnico_responsavel || 'Equipe Geral'}</strong>
-                  </div>
-                  {c.status !== 'Concluído' && (
-                    <div className="chamado-meta-item" style={{ color: colorTheme }}>
-                      <AlertCircle size={16} /> Urgência: <strong>{c.urgencia}</strong>
-                    </div>
-                  )}
-                  <div className="chamado-meta-item">
-                    <Clock size={16} /> Abertura: {new Date(c.data_abertura).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                  </div>
-                </div>
-                
-                {c.status === 'Concluído' && (
-                  <div className="chamado-resolucao">
-                    <div className="chamado-resolucao-title"><CheckSquare size={16} /> Nota de Resolução:</div>
-                    <div className="chamado-resolucao-text">{c.nota_resolucao}</div>
-                    <div className="chamado-resolucao-date">Concluído em: {c.data_conclusao ? new Date(c.data_conclusao).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : ''}</div>
-                  </div>
-                )}
-                
-                {c.status !== 'Concluído' && (
-                  <div className="chamado-actions">
-                    {userRole === 'ADMIN' && (
-                      <select className="select-input w-100" value={c.urgencia} onChange={(e) => api.put(`/chamados/${c.id}/urgencia`, { urgencia: e.target.value }).then(carregarChamados)}>
-                        <option value="Pendente">Urgência: Pendente...</option>
-                        <option value="Baixa">Baixa</option>
-                        <option value="Média">Média</option>
-                        <option value="Alta">Alta</option>
-                        <option value="Crítica">Crítica (Imediato)</option>
-                      </select>
-                    )}
-                    
-                    {(userRole === 'ADMIN' || userRole === 'MANUTENCAO') && (
-                      <button className="btn btn-outline w-100" style={{ borderColor: 'var(--success)', color: 'var(--success)' }} onClick={() => setModalResolver({ isOpen: true, chamadoId: c.id, nota: '' })}>
-                        <CheckCircle size={16} /> Marcar como Corrigido
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        
+        <div className="chamado-desc-box">
+          <strong>Relato:</strong> {c.descricao}
         </div>
-      )}
 
-      {/* 🔴 MODAL PARA ABRIR NOVO CHAMADO */}
-      {modalChamado && (
-        <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '10vh' }}>
-          <div className="modal-content" style={{ maxWidth: '500px', width: '100%' }}>
-            <h3><Wrench size={20} style={{ verticalAlign: 'middle', marginRight: '8px', color: 'var(--primary)' }}/> Nova Ordem de Serviço</h3>
-            <form onSubmit={async (e) => { e.preventDefault(); if (isOffline) return showToast('Ação bloqueada.', 'warning'); if (!formChamado.equipamento_id) return showToast('Selecione um equipamento.', 'error'); try { await api.post('/chamados', formChamado); showToast('Chamado aberto!', 'success'); setModalChamado(false); carregarChamados(); } catch (err) { showToast('Erro ao abrir o chamado.', 'error'); } }}>
-              <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
-                <div>
-                  <label>Máquina / Equipamento</label>
-                  <select className="select-input w-100" value={formChamado.equipamento_id} onChange={e => setFormChamado({...formChamado, equipamento_id: e.target.value})} required>
-                    <option value="">Selecione...</option>
-                    {equipamentosDaFilial?.map(eq => (<option key={eq.id} value={eq.id}>{userRole === 'ADMIN' ? `[${eq.filial}] ` : ''}{eq.nome} - {eq.setor}</option>))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label>Descrição do Problema</label>
-                  <textarea className="textarea-chamado" rows="4" placeholder="Ex: O compressor está a fazer um ruído estranho..." value={formChamado.descricao} onChange={e => setFormChamado({...formChamado, descricao: e.target.value})} required />
-                </div>
-                
-                <div>
-                  <label>Nome do Solicitante</label>
-                  <input type="text" className="input-readonly w-100" value={formChamado.solicitante_nome} readOnly />
-                </div>
-                
-                <div>
-                  <label>Técnico Específico (Opcional)</label>
-                  <select className="select-input w-100" value={formChamado.tecnico_responsavel} onChange={e => setFormChamado({...formChamado, tecnico_responsavel: e.target.value})}>
-                    <option value="">Deixar em aberto</option>
-                    {tecnicosDb?.map(t => <option key={t.id} value={t.nome_tecnico}>{t.nome_tecnico}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
-                <button type="button" className="btn btn-outline" onClick={() => setModalChamado(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary"><Save size={18}/> Abrir Chamado</button>
-              </div>
-            </form>
+        {isConcluido && c.nota_resolucao && (
+          <div className="chamado-resolucao-box">
+            <div className="resolucao-title"><CheckSquare size={14} /> Laudo de Resolução:</div>
+            <p>{c.nota_resolucao}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="chamado-actions">
+        {!isConcluido ? (
+          <button className="btn w-100" style={{ background: urgencyColor, color: 'white', border: 'none' }} onClick={() => onResolver(c.id)} disabled={isOffline}>
+            <Wrench size={16} /> Inserir Laudo e Concluir
+          </button>
+        ) : (
+          <button className="btn btn-outline w-100 btn-arquivar" onClick={() => onArquivar(c.id)} disabled={isOffline}>
+            <Archive size={16} /> Mover para Arquivo Histórico
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// ============================================================================
+// COMPONENTE PRINCIPAL
+// ============================================================================
+export default function Chamados({
+  userRole, filialAtiva, nomeLogado, chamados = [], tecnicosDb = [], equipamentosDaFilial = [],
+  api, carregarChamados, showToast, isOffline, gerarLoteOS
+}) {
+
+  /* --- ESTADOS --- */
+  const [busca, setBusca] = useState('');
+  const [tecnicoFiltroOS, setTecnicoFiltroOS] = useState('todos');
+  const [filtroTempoOS, setFiltroTempoOS] = useState('todos');
+
+  const [modalChamado, setModalChamado] = useState(false);
+  const [formChamado, setFormChamado] = useState({ equipamento_id: '', descricao: '', urgencia: 'Baixa', tecnico_responsavel: '' });
+  const [modalResolver, setModalResolver] = useState({ isOpen: false, chamadoId: null, nota: '' });
+  const [modalArquivarTodos, setModalArquivarTodos] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  /* --- FILTRAGEM DE ALTA PERFORMANCE (Single-Pass Loop) --- */
+  const chamadosAtivosFiltrados = useMemo(() => {
+    if (!chamados || chamados.length === 0) return [];
+
+    const agora = Date.now();
+    const termoBusca = busca.toLowerCase().trim();
+    const roleAdmin = userRole === 'ADMIN';
+    const roleManu = userRole === 'MANUTENCAO';
+    
+    // Filtro num único loop para poupar CPU
+    let list = chamados.filter(c => {
+      if (c.arquivado) return false;
+      
+      if (roleAdmin && filialAtiva !== 'Todas' && c.filial !== filialAtiva) return false;
+      
+      if (roleManu) {
+        if (c.tecnico_responsavel && c.tecnico_responsavel !== nomeLogado) return false;
+      } else if (tecnicoFiltroOS !== 'todos') {
+        if (c.tecnico_responsavel !== tecnicoFiltroOS) return false;
+      }
+
+      if (filtroTempoOS !== 'todos') {
+        const tempoAbertura = new Date(c.data_abertura).getTime();
+        if (filtroTempoOS === '24h' && (agora - tempoAbertura > 86400000)) return false;
+        if (filtroTempoOS === '7d' && (agora - tempoAbertura > 604800000)) return false;
+      }
+
+      if (termoBusca) {
+        const eqNome = c.equipamento_nome ? c.equipamento_nome.toLowerCase() : '';
+        const desc = c.descricao ? c.descricao.toLowerCase() : '';
+        const tecResp = c.tecnico_responsavel ? c.tecnico_responsavel.toLowerCase() : '';
+        if (!eqNome.includes(termoBusca) && !desc.includes(termoBusca) && !tecResp.includes(termoBusca)) return false;
+      }
+
+      return true;
+    });
+
+    // Ordenação
+    return list.sort((a, b) => {
+      if (a.status !== 'Concluído' && b.status === 'Concluído') return -1;
+      if (a.status === 'Concluído' && b.status !== 'Concluído') return 1;
+      
+      const urgMap = { 'Alta': 3, 'Média': 2, 'Baixa': 1 };
+      const urgDiff = (urgMap[b.urgencia] || 0) - (urgMap[a.urgencia] || 0);
+      if (urgDiff !== 0) return urgDiff;
+      
+      return new Date(b.data_abertura).getTime() - new Date(a.data_abertura).getTime(); 
+    });
+  }, [chamados, filialAtiva, userRole, nomeLogado, tecnicoFiltroOS, filtroTempoOS, busca]);
+
+  /* --- CÁLCULO DE KPIs --- */
+  const { kpis, concluidosCount } = useMemo(() => {
+    let pendentes = 0; let concluidos = 0; let criticos = 0;
+    chamadosAtivosFiltrados.forEach(c => {
+      if (c.status === 'Concluído') concluidos++;
+      else { pendentes++; if (c.urgencia === 'Alta') criticos++; }
+    });
+    return { 
+      kpis: { total: chamadosAtivosFiltrados.length, pendentes, concluidos, criticos }, 
+      concluidosCount: concluidos 
+    };
+  }, [chamadosAtivosFiltrados]);
+
+  /* --- FUNÇÕES DA API (Mapeadas via useCallback para não quebrar a memoização) --- */
+  const arquivarChamado = useCallback(async (id) => {
+    if (isOffline) return showToast('Ação não permitida em modo offline.', 'warning');
+    try {
+      await api.put(`/chamados/${id}/arquivar`);
+      showToast('Ordem de Serviço arquivada.', 'success');
+      carregarChamados();
+    } catch (e) { showToast('Erro ao arquivar OS.', 'error'); }
+  }, [api, isOffline, showToast, carregarChamados]);
+
+  const abrirModalResolver = useCallback((id) => {
+    setModalResolver({ isOpen: true, chamadoId: id, nota: '' });
+  }, []);
+
+  const confirmarArquivarTodos = async () => {
+    if (isOffline) return showToast('Modo offline ativo.', 'warning');
+    setIsProcessing(true);
+    try {
+      const idsParaArquivar = chamadosAtivosFiltrados.filter(c => c.status === 'Concluído').map(c => c.id);
+      if (idsParaArquivar.length === 0) return;
+
+      await Promise.all(idsParaArquivar.map(id => api.put(`/chamados/${id}/arquivar`)));
+      showToast(`${idsParaArquivar.length} OS arquivada(s) com sucesso.`, 'success');
+      setModalArquivarTodos(false);
+      carregarChamados();
+    } catch (e) { 
+      showToast('Erro ao arquivar lote. Verifique a conexão.', 'error'); 
+    } finally { setIsProcessing(false); }
+  };
+
+  const confirmarResolucao = async () => {
+    if (!modalResolver.nota.trim()) return showToast('O Laudo Técnico é obrigatório para fechamento.', 'warning');
+    if (isOffline) return showToast('Modo offline ativo.', 'warning');
+    setIsProcessing(true);
+    try {
+      await api.put(`/chamados/${modalResolver.chamadoId}/resolver`, { nota_resolucao: modalResolver.nota });
+      showToast('Laudo Técnico validado e OS concluída.', 'success');
+      setModalResolver({ isOpen: false, chamadoId: null, nota: '' });
+      carregarChamados();
+    } catch (e) { showToast('Erro ao concluir OS.', 'error'); }
+    finally { setIsProcessing(false); }
+  };
+
+  const salvarChamado = async (e) => {
+    e.preventDefault();
+    if (isOffline) return showToast('Modo offline ativo.', 'warning');
+    setIsProcessing(true);
+    try {
+      await api.post('/chamados', {
+        equipamento_id: formChamado.equipamento_id,
+        descricao: formChamado.descricao,
+        urgencia: formChamado.urgencia,
+        tecnico_responsavel: formChamado.tecnico_responsavel || null,
+        filial: filialAtiva === 'Todas' ? (equipamentosDaFilial.find(eq => String(eq.id) === String(formChamado.equipamento_id))?.filial || 'Loja Base') : filialAtiva
+      });
+      showToast('Ordem de Serviço Aberta.', 'success');
+      setModalChamado(false);
+      setFormChamado({ equipamento_id: '', descricao: '', urgencia: 'Baixa', tecnico_responsavel: '' });
+      carregarChamados();
+    } catch (e) { showToast('Erro ao abrir OS.', 'error'); }
+    finally { setIsProcessing(false); }
+  };
+
+  return (
+    <div className="anim-fade-in stagger-1">
+      
+      {/* CABEÇALHO DO SERVICE DESK */}
+      <div className="chamados-header">
+        <div>
+          <h3 className="chamados-title">Gestão de Ocorrências (OS)</h3>
+          <p className="chamados-subtitle">Painel de Despacho e Intervenções Técnicas</p>
+        </div>
+
+        <div className="chamados-actions">
+          <div className="search-box-chamados">
+            <Search size={16} className="search-icon" />
+            <input 
+              type="text" 
+              placeholder="Buscar OS ou técnico..." 
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+          </div>
+
+          <button className="btn btn-primary" onClick={() => setModalChamado(true)} style={{ boxShadow: '0 4px 15px rgba(5, 150, 105, 0.3)' }}>
+            <MessageSquarePlus size={18} /> Nova OS
+          </button>
+
+          {userRole !== 'MANUTENCAO' && concluidosCount > 0 && (
+            <button className="btn btn-outline btn-archive-all" onClick={() => setModalArquivarTodos(true)}>
+              <Archive size={18} /> Arquivar Lote ({concluidosCount})
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* FILTROS SECUNDÁRIOS */}
+      <div className="chamados-filters-bar stagger-2">
+        {userRole !== 'MANUTENCAO' && (
+          <select className="select-input chamados-filter-select" value={tecnicoFiltroOS} onChange={e => setTecnicoFiltroOS(e.target.value)}>
+            <option value="todos">Todos os Técnicos</option>
+            {tecnicosDb?.map(tec => <option key={tec.id} value={tec.nome_tecnico}>{tec.nome_tecnico}</option>)}
+          </select>
+        )}
+        <select className="select-input chamados-filter-select" value={filtroTempoOS} onChange={e => setFiltroTempoOS(e.target.value)}>
+          <option value="todos">Qualquer Data</option>
+          <option value="24h">Últimas 24 Horas</option>
+          <option value="7d">Últimos 7 Dias</option>
+        </select>
+        
+        <button className="btn btn-print-os" onClick={() => gerarLoteOS(chamadosAtivosFiltrados)}>
+          <Printer size={16} /> Imprimir Lote
+        </button>
+      </div>
+
+      {/* PAINEL DE KPIs DE SERVICE DESK */}
+      <div className="chamados-kpi-bar stagger-2">
+        <div className="kpi-item total">
+          <div className="kpi-icon"><Settings size={20}/></div>
+          <div className="kpi-data">
+            <span className="kpi-value">{kpis.total}</span>
+            <span className="kpi-label">OS Ativas</span>
           </div>
         </div>
+        <div className="kpi-item warning">
+          <div className="kpi-icon"><PlayCircle size={20}/></div>
+          <div className="kpi-data">
+            <span className="kpi-value">{kpis.pendentes}</span>
+            <span className="kpi-label">Pendentes</span>
+          </div>
+        </div>
+        <div className={`kpi-item ${kpis.criticos > 0 ? 'danger pulse-kpi-danger' : 'ok'}`}>
+          <div className="kpi-icon"><AlertTriangle size={20}/></div>
+          <div className="kpi-data">
+            <span className="kpi-value">{kpis.criticos}</span>
+            <span className="kpi-label">Críticos</span>
+          </div>
+        </div>
+        <div className="kpi-item success">
+          <div className="kpi-icon"><CheckCircle size={20}/></div>
+          <div className="kpi-data">
+            <span className="kpi-value">{kpis.concluidos}</span>
+            <span className="kpi-label">Aguardando Arquivo</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ESTADO VAZIO */}
+      {chamadosAtivosFiltrados.length === 0 ? (
+        <div className="empty-state dashboard-empty stagger-3">
+          <div className="empty-shield-box" style={{ background: 'rgba(56, 189, 248, 0.1)' }}>
+            <CheckSquare size={48} color="var(--secondary)" />
+          </div>
+          <h3 className="empty-title" style={{ color: 'var(--text-main)' }}>Painel Limpo</h3>
+          <p className="empty-subtitle">Não existem ordens de serviço ativas. Toda a manutenção está em dia!</p>
+        </div>
+      ) : (
+        /* GRELHA DE CARTÕES (TICKETS) */
+        <div className="grid-cards stagger-3">
+          {chamadosAtivosFiltrados.map(c => (
+            <ChamadoCard 
+              key={c.id} 
+              c={c} 
+              isOffline={isOffline} 
+              onResolver={abrirModalResolver} 
+              onArquivar={arquivarChamado} 
+            />
+          ))}
+        </div>
       )}
 
-      {/* 🔴 NOVO: MODAL PREMIUM DE RESOLUÇÃO */}
-      {modalResolver.isOpen && (
-        <div className="modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '15vh' }}>
-          <div className="modal-content" style={{ maxWidth: '450px', width: '100%' }}>
-            <h3><CheckSquare size={22} style={{ color: 'var(--success)', marginRight: '8px' }} /> Concluir Chamado</h3>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-              Descreva brevemente a intervenção técnica realizada para manter o histórico de manutenção rigoroso.
-            </p>
-            <form onSubmit={concluirChamado}>
-              <div className="form-group">
-                <label>Nota de Resolução Técnica</label>
-                <textarea 
-                  className="textarea-chamado" 
-                  rows="4" 
-                  placeholder="Ex: Substituição da válvula solenoide e recarga de gás." 
-                  value={modalResolver.nota} 
-                  onChange={e => setModalResolver({...modalResolver, nota: e.target.value})} 
-                  autoFocus 
-                  required 
-                />
+      {/* MODAL DE CRIAÇÃO DE OS */}
+      {modalChamado && (
+        <div className="chamados-fixed-overlay anim-fade-in">
+          <div className="chamados-modal-box">
+            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <MessageSquarePlus size={22} color="var(--primary)" /> Emissão de Nova OS
+            </h3>
+            
+            <form onSubmit={salvarChamado}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Máquina / Equipamento com Avaria</label>
+                <select className="select-input w-100" value={formChamado.equipamento_id} onChange={e => setFormChamado({...formChamado, equipamento_id: e.target.value})} required>
+                  <option value="">-- Selecione a Máquina --</option>
+                  {equipamentosDaFilial?.map(eq => <option key={eq.id} value={eq.id}>{eq.nome} ({eq.filial || 'Base'})</option>)}
+                </select>
               </div>
-              <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
-                <button type="button" className="btn btn-outline" onClick={() => setModalResolver({ isOpen: false, chamadoId: null, nota: '' })}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ background: 'var(--success)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}>
-                  <CheckCircle size={18}/> Concluir e Arquivar
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Descrição do Problema / Motivo da OS</label>
+                <textarea className="textarea-chamado" value={formChamado.descricao} onChange={e => setFormChamado({...formChamado, descricao: e.target.value})} placeholder="Descreva os sintomas da avaria detalhadamente..." rows="4" required />
+              </div>
+
+              <div className="form-grid-chamados">
+                <div className="form-group">
+                  <label>Nível de Urgência</label>
+                  <select className="select-input w-100" value={formChamado.urgencia} onChange={e => setFormChamado({...formChamado, urgencia: e.target.value})} required>
+                    <option value="Baixa">Baixa (Rotina)</option>
+                    <option value="Média">Média (Atenção)</option>
+                    <option value="Alta">Alta (Emergência T.)</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Técnico Designado</label>
+                  <select className="select-input w-100" value={formChamado.tecnico_responsavel} onChange={e => setFormChamado({...formChamado, tecnico_responsavel: e.target.value})}>
+                    <option value="">Aguardando Despacho</option>
+                    {tecnicosDb?.map(tec => <option key={tec.id} value={tec.nome_tecnico}>{tec.nome_tecnico}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="modal-actions-chamados" style={{ marginTop: '2rem' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setModalChamado(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" disabled={isProcessing || isOffline}>
+                  {isProcessing ? <Loader2 className="spinner" size={18} /> : <Save size={18} />} 
+                  Emitir OS
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* MODAL DE RESOLUÇÃO (LAUDO TÉCNICO) */}
+      {modalResolver.isOpen && (
+        <div className="chamados-fixed-overlay anim-fade-in">
+          <div className="chamados-modal-box">
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', marginBottom: '1.5rem' }}>
+              <CheckCircle size={22} /> Laudo Técnico de Fechamento
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+              Registre as peças trocadas ou as medidas corretivas aplicadas para fins de auditoria futura.
+            </p>
+            <textarea 
+              className="textarea-chamado" 
+              value={modalResolver.nota} 
+              onChange={e => setModalResolver({...modalResolver, nota: e.target.value})} 
+              placeholder="Ex: Trocado termostato e motor de arranque. Testes a 100%..." 
+              rows="5" autoFocus 
+            />
+            <div className="modal-actions-chamados" style={{ marginTop: '1.5rem' }}>
+              <button className="btn btn-outline" onClick={() => setModalResolver({ isOpen: false, chamadoId: null, nota: '' })}>Cancelar</button>
+              <button className="btn btn-primary" onClick={confirmarResolucao} disabled={isProcessing || isOffline || !modalResolver.nota.trim()}>
+                {isProcessing ? <Loader2 className="spinner" size={18} /> : <CheckCircle size={18} />} 
+                Validar e Concluir OS
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ARQUIVAR TODOS LOTE */}
+      {modalArquivarTodos && (
+        <div className="chamados-fixed-overlay anim-fade-in">
+          <div className="chamados-modal-box" style={{ borderTop: '4px solid var(--info)' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--info)', margin: '0 0 1rem 0' }}>
+              <Archive size={24} /> Arquivar Ocorrências
+            </h3>
+            <p style={{ color: 'var(--text-main)', fontSize: '0.95rem', lineHeight: '1.5', marginBottom: '1.5rem' }}>
+              Tem certeza que deseja mover <strong>{concluidosCount} chamado(s) concluído(s)</strong> para o Arquivo Histórico?
+              <br/><br/>
+              Eles sairão deste painel principal (Service Desk) e ficarão disponíveis permanentemente na seção de Arquivo Técnico.
+            </p>
+            <div className="modal-actions-chamados">
+              <button className="btn btn-outline" onClick={() => setModalArquivarTodos(false)} disabled={isProcessing}>Cancelar</button>
+              <button className="btn" style={{ background: 'var(--info)', color: 'white', display: 'flex', alignItems: 'center', gap: '8px', border: 'none' }} onClick={confirmarArquivarTodos} disabled={isProcessing || isOffline}>
+                {isProcessing ? <Loader2 className="spinner" size={18} /> : <CheckCircle size={18} />} Sim, Arquivar Todos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -1,40 +1,150 @@
 /* =========================================
-   ESTILOS PREMIUM: GESTÃO DE LOJAS
+   ESTILOS PREMIUM: GESTÃO DE LOJAS (FILIAIS)
    ========================================= */
+
+.gestao-lojas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
 
 .gestao-lojas-title {
   margin: 0;
+  display: flex;
+  align-items: center;
+  font-weight: 800;
 }
 
-.gestao-lojas-card {
-  margin-top: 1.5rem;
+/* Nova Barra de Pesquisa */
+.loja-search-box {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 12px;
+  transition: all 0.3s ease;
+  min-width: 280px;
+}
+
+.dark-theme .loja-search-box {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.loja-search-box:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+  background: var(--card-bg);
+}
+
+.loja-search-box input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  padding: 0 8px;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  outline: none;
 }
 
 /* =========================================
-   ELEMENTOS DA TABELA
+   BARRA DE KPIs (Dashboard Rápido)
    ========================================= */
+.lojas-kpi-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.kpi-item {
+  flex: 1;
+  min-width: 160px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.kpi-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+}
+
+.kpi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kpi-data {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-value { font-size: 1.3rem; font-weight: 800; color: var(--text-main); }
+.kpi-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;}
+
+/* Cores específicas dos KPIs */
+.kpi-item.total .kpi-icon { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+.kpi-item.warning .kpi-icon { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+.kpi-item.info .kpi-icon { background: rgba(14, 165, 233, 0.1); color: #0ea5e9; }
+.kpi-item.ok .kpi-icon { background: rgba(100, 116, 139, 0.1); color: var(--text-muted); }
+
+.gestao-lojas-card {
+  margin-top: 0.5rem;
+}
+
+/* =========================================
+   ELEMENTOS VISUAIS DA TABELA
+   ========================================= */
+.loja-table-row {
+  transition: all 0.2s ease;
+}
+
+.loja-table-row:hover td {
+  background-color: rgba(0, 0, 0, 0.01);
+}
+
+.dark-theme .loja-table-row:hover td {
+  background-color: rgba(255, 255, 255, 0.01);
+}
+
 .loja-name-box {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 1.1rem;
+  gap: 12px;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--text-main);
 }
 
 .loja-icon-wrapper {
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
-  padding: 8px;
-  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  padding: 10px;
+  border-radius: 12px;
   display: flex;
   color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
-/* Badges de Liderança (Gerente/Coordenador) */
+/* =========================================
+   BADGES DE LIDERANÇA (Gerente / Coordenador)
+   ========================================= */
 .leadership-box {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .leader-badge {
@@ -42,7 +152,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 600;
   width: fit-content;
@@ -61,33 +171,31 @@
 }
 
 .leader-badge.missing {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: var(--text-muted);
-  border: 1px dashed var(--border);
+  background-color: rgba(239, 68, 68, 0.05);
+  color: var(--danger);
+  border: 1px dashed rgba(239, 68, 68, 0.3);
 }
 
-.dark-theme .leader-badge.missing {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-/* Linhas de Contacto */
+/* =========================================
+   INFORMAÇÕES DE CONTACTO
+   ========================================= */
 .contact-box {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .contact-line {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 0.85rem;
-  color: var(--text-muted);
+  color: var(--text-main);
+  font-weight: 500;
 }
 
 .contact-line svg {
-  color: var(--text-main);
-  opacity: 0.7;
+  color: var(--text-muted);
 }
 
 /* =========================================
@@ -97,6 +205,7 @@
   padding: 0.5rem;
   border-radius: 8px;
   transition: all 0.2s;
+  cursor: pointer;
 }
 
 .btn-action.edit {
@@ -123,7 +232,7 @@
 }
 
 /* =========================================
-   MODAL
+   ESTRUTURA DO MODAL DE CADASTRO
    ========================================= */
 .gestao-lojas-modal {
   align-items: flex-start;
@@ -137,4 +246,59 @@
 
 .gestao-lojas-form-grid {
   grid-template-columns: 1fr;
+}
+
+.gestao-lojas-modal-actions {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border);
+}
+
+/* =========================================
+   RESPONSIVIDADE (MOBILE)
+   ========================================= */
+@media (max-width: 768px) {
+  .gestao-lojas-header { flex-direction: column; align-items: stretch; }
+  .loja-search-box { min-width: 100%; }
+
+  .gestao-lojas-card .table thead {
+    display: none;
+  }
+
+  .gestao-lojas-card .table tr {
+    display: block;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    background: var(--card-bg);
+  }
+
+  .gestao-lojas-card .table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px dashed var(--border);
+    padding: 12px 8px;
+    text-align: right;
+  }
+
+  .gestao-lojas-card .table td:last-child {
+    border-bottom: none;
+    justify-content: flex-end;
+  }
+
+  .gestao-lojas-card .table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    text-align: left;
+    margin-right: 15px;
+  }
+
+  .loja-name-box, .contact-box, .leadership-box {
+    align-items: flex-end;
+  }
 }

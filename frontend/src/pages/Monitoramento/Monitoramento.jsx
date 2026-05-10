@@ -1,130 +1,282 @@
 import React, { useState, useMemo } from 'react';
-import { Thermometer, Droplets, Power, Snowflake, AlertOctagon, MapPin, Gauge } from 'lucide-react';
+import { Thermometer, Droplets, Power, Snowflake, AlertOctagon, MapPin, Gauge, ShieldAlert, CheckCircle2, WifiOff, Search, ArrowUpRight, ArrowDownRight, Filter } from 'lucide-react';
 import './Monitoramento.css';
 
 export default function Monitoramento({ isTemp, listaSetores, equipamentosDaFilial }) {
   const [setorFiltro, setSetorFiltro] = useState('');
+  const [buscaNome, setBuscaNome] = useState('');
+  const [modoFoco, setModoFoco] = useState(false); // NOVO: Modo Foco para ocultar o que está OK
 
+  // Filtro combinado: Setor + Nome + Modo Foco + Ordenação Inteligente
   const filtrados = useMemo(() => {
-    return setorFiltro ? equipamentosDaFilial?.filter(eq => eq.setor === setorFiltro) : equipamentosDaFilial;
-  }, [equipamentosDaFilial, setorFiltro]);
+    let resultado = equipamentosDaFilial || [];
+    
+    // 1. Filtros de Texto e Dropdown
+    if (setorFiltro) resultado = resultado.filter(eq => eq.setor === setorFiltro);
+    if (buscaNome) resultado = resultado.filter(eq => eq.nome.toLowerCase().includes(buscaNome.toLowerCase()));
+
+    // 2. Lógica do Modo Foco e Pontuação de Gravidade (Triagem)
+    resultado = resultado.filter(eq => {
+      const min = isTemp ? parseFloat(eq.temp_min) : parseFloat(eq.umidade_min || 40);
+      const max = isTemp ? parseFloat(eq.temp_max) : parseFloat(eq.umidade_max || 80);
+      const val = isTemp ? parseFloat(eq.ultima_temp) : parseFloat(eq.ultima_umidade);
+      const temDados = !isNaN(val);
+      const isFora = temDados && (val < min || val > max);
+
+      const isAlerta = !temDados || !eq.motor_ligado || isFora;
+      
+      // Se o Modo Foco estiver ativo, só mostra quem tem problemas ou está em degelo
+      if (modoFoco) return isAlerta || eq.em_degelo;
+      return true;
+    });
+
+    // 3. Ordenação Inteligente: Alertas Críticos > Offline > Degelo > Normal
+    resultado.sort((a, b) => {
+      const getScore = (eq) => {
+        const min = isTemp ? parseFloat(eq.temp_min) : parseFloat(eq.umidade_min || 40);
+        const max = isTemp ? parseFloat(eq.temp_max) : parseFloat(eq.umidade_max || 80);
+        const val = isTemp ? parseFloat(eq.ultima_temp) : parseFloat(eq.ultima_umidade);
+        const temDados = !isNaN(val);
+        const isFora = temDados && (val < min || val > max);
+
+        if (!eq.motor_ligado || isFora) return 4; // Prioridade Máxima (Fogo!)
+        if (!temDados) return 3; // Sem Sinal
+        if (eq.em_degelo) return 2; // Atenção
+        return 1; // Tudo OK
+      };
+      
+      return getScore(b) - getScore(a);
+    });
+
+    return resultado;
+  }, [equipamentosDaFilial, setorFiltro, buscaNome, modoFoco, isTemp]);
+
+  // Cálculo de KPIs para o topo da página (Manteve-se igual mas baseado nos equipamentos da filial inteira para não alterar os contadores)
+  const kpis = useMemo(() => {
+    const baseList = equipamentosDaFilial || [];
+    let alertas = 0, degelo = 0, offline = 0, ok = 0;
+
+    baseList.forEach(eq => {
+      const val = isTemp ? parseFloat(eq.ultima_temp) : parseFloat(eq.ultima_umidade);
+      const min = isTemp ? parseFloat(eq.temp_min) : parseFloat(eq.umidade_min || 40);
+      const max = isTemp ? parseFloat(eq.temp_max) : parseFloat(eq.umidade_max || 80);
+      const temDados = !isNaN(val);
+      const isFora = temDados && (val < min || val > max);
+
+      if (!temDados) offline++;
+      else if (eq.em_degelo) degelo++;
+      else if (!eq.motor_ligado || isFora) alertas++;
+      else ok++;
+    });
+
+    return { total: baseList.length, alertas, degelo, offline, ok };
+  }, [equipamentosDaFilial, isTemp]);
 
   return (
     <div className="anim-fade-in stagger-1">
-      <div className="flex-header">
-        <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {/* CABEÇALHO E FILTROS */}
+      <div className="flex-header monitoramento-header">
+        <div className="header-title-area">
           <div className="icon-circle" style={{ background: isTemp ? 'var(--primary)' : '#0ea5e9', color: 'white' }}>
             {isTemp ? <Thermometer size={24} /> : <Droplets size={24} />}
           </div>
           <div>
-            {isTemp ? 'Cadeia de Frio' : 'Controlo Higrométrico'}
-            <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-muted)', marginTop: '2px' }}>Monitorização em Tempo Real</span>
+            <h3 style={{ margin: 0 }}>{isTemp ? 'Controle Térmico' : 'Controle Higrométrico'}</h3>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '600', color: 'var(--success)', marginTop: '4px' }}>
+              <span className="live-indicator-dot"></span> Telemetria em Tempo Real
+            </span>
           </div>
-        </h3>
+        </div>
         
-        <div className="action-group">
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <MapPin size={18} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)', zIndex: 1 }} />
-            <select 
-              className="select-input" 
-              style={{ paddingLeft: '38px', minWidth: '200px' }}
-              value={setorFiltro} 
-              onChange={(e) => setSetorFiltro(e.target.value)}
-            >
-              <option value="">Todos os Setores</option>
-              {listaSetores?.map((s, idx) => (
-                <option key={idx} value={typeof s === 'object' ? s.nome : s}>{typeof s === 'object' ? s.nome : s}</option>
-              ))}
-            </select>
+        <div className="action-group" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          
+          {/* NOVO BOTÃO: Modo Foco */}
+          <button 
+            className={`btn-focus-mode ${modoFoco ? 'active' : ''}`}
+            onClick={() => setModoFoco(!modoFoco)}
+            title="Ocultar equipamentos saudáveis e focar apenas nas ocorrências"
+          >
+            <Filter size={16} /> {modoFoco ? 'Apenas Alertas' : 'Modo Foco'}
+          </button>
+
+          <div className="monitor-search-box">
+            <Search size={16} color="var(--text-muted)" />
+            <input 
+              type="text" 
+              placeholder="Procurar máquina..." 
+              value={buscaNome} 
+              onChange={e => setBuscaNome(e.target.value)} 
+            />
+          </div>
+          <select className="select-input" value={setorFiltro} onChange={(e) => setSetorFiltro(e.target.value)}>
+            <option value="">Visão Global (Todos)</option>
+            {listaSetores?.map(s => <option key={s.id} value={s.nome}>{s.nome}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* BARRA DE KPIS RÁPIDOS */}
+      <div className="monitor-kpi-bar stagger-2">
+        <div className="kpi-item total">
+          <div className="kpi-icon"><Gauge size={20}/></div>
+          <div className="kpi-data">
+            <span className="kpi-value">{kpis.total}</span>
+            <span className="kpi-label">Equipamentos</span>
+          </div>
+        </div>
+        <div className="kpi-item ok">
+          <div className="kpi-icon"><CheckCircle2 size={20}/></div>
+          <div className="kpi-data">
+            <span className="kpi-value">{kpis.ok}</span>
+            <span className="kpi-label">Operacionais</span>
+          </div>
+        </div>
+        <div className={`kpi-item danger ${kpis.alertas > 0 ? 'pulse-kpi-danger' : ''}`}>
+          <div className="kpi-icon"><ShieldAlert size={20}/></div>
+          <div className="kpi-data">
+            <span className="kpi-value">{kpis.alertas}</span>
+            <span className="kpi-label">Em Alerta</span>
+          </div>
+        </div>
+        <div className="kpi-item info">
+          <div className="kpi-icon"><Snowflake size={20}/></div>
+          <div className="kpi-data">
+            <span className="kpi-value">{kpis.degelo}</span>
+            <span className="kpi-label">Em Degelo</span>
+          </div>
+        </div>
+        <div className="kpi-item warning">
+          <div className="kpi-icon"><WifiOff size={20}/></div>
+          <div className="kpi-data">
+            <span className="kpi-value">{kpis.offline}</span>
+            <span className="kpi-label">Sem Sinal</span>
           </div>
         </div>
       </div>
 
-      <div className="monitor-grid">
-        {filtrados?.map((eq, index) => {
-          // 🛠️ CORREÇÃO CRÍTICA: Tenta ler ultima_umidade (Socket), umidade (API) ou humidade (alternativo)
-          // Se não encontrar nada, define como NULL (não como 0) para evitar erro de "menor que o mínimo"
-          const valRaw = isTemp 
-            ? (eq.ultima_temp ?? eq.temperatura ?? null) 
-            : (eq.ultima_umidade ?? eq.umidade ?? eq.humidade ?? null);
+      {/* ESTADO VAZIO (EMPTY STATE) */}
+      {!filtrados || filtrados.length === 0 ? (
+        <div className="monitor-empty-state stagger-3">
+          {modoFoco ? (
+             <ShieldAlert size={64} style={{ color: 'var(--success)', marginBottom: '1rem', animation: 'pulse-kpi-success 2s infinite' }} />
+          ) : (
+             <Gauge size={64} style={{ opacity: 0.2, marginBottom: '1rem', color: 'var(--text-main)' }} />
+          )}
           
-          const val = valRaw !== null ? parseFloat(valRaw) : null;
-          
-          // Fallbacks de Limites (Garante que se não houver limite definido, não dispara erro falso)
-          // No seu Monitoramento.jsx, garanta que os mínimos são realistas:
-const min = parseFloat(isTemp ? (eq.temp_min ?? -5) : (eq.umidade_min ?? 35)); // Use 35 como fallback de segurança
-const max = parseFloat(isTemp ? (eq.temp_max ?? 15) : (eq.umidade_max ?? 85));
-          
-          // SÓ ATIVA ALERTA SE: O valor existir E for maior que 0.1 (evita offline) E estiver fora dos limites
-          const temDados = val !== null && val > 0.1;
-          const isFora = temDados && (val < min || val > max);
-          
-          const statusCor = isFora ? 'var(--danger)' : (isTemp && eq.em_degelo ? '#0ea5e9' : 'var(--primary)');
-          
-          // Cálculo da posição do ponteiro (Proteção contra divisão por zero)
-          const range = max - min;
-          const position = (temDados && range !== 0) 
-            ? Math.min(Math.max(((val - min) / range) * 100, 0), 100) 
-            : 0;
+          <h3>{modoFoco ? 'Operação 100% Segura' : 'Nenhuma Máquina Encontrada'}</h3>
+          <p>{modoFoco ? 'Não existem equipamentos fora dos parâmetros no momento. Ótimo trabalho!' : 'Não existem equipamentos registados ou a sua pesquisa não devolveu resultados.'}</p>
+        </div>
+      ) : (
+        /* GRELHA DE EQUIPAMENTOS */
+        <div className="monitor-grid stagger-3">
+          {filtrados.map(eq => {
+            const min = isTemp ? parseFloat(eq.temp_min) : parseFloat(eq.umidade_min || 40);
+            const max = isTemp ? parseFloat(eq.temp_max) : parseFloat(eq.umidade_max || 80);
+            const val = isTemp ? parseFloat(eq.ultima_temp) : parseFloat(eq.ultima_umidade);
+            const unit = isTemp ? '°C' : '%';
+            const temDados = !isNaN(val);
+            
+            // Inteligência do Alerta
+            const isAcima = temDados && val > max;
+            const isAbaixo = temDados && val < min;
+            const isFora = isAcima || isAbaixo;
+            
+            // Definição de Status, Cores e Ícones
+            let status = 'NORMAL';
+            let statusCor = 'var(--success)';
+            let IconeStatus = CheckCircle2;
+            let statusLabel = 'Operação Segura';
 
-          return (
-            <div key={eq.id} className={`monitor-card anim-fade-in ${isFora ? 'border-danger' : ''}`} style={{ animationDelay: `${index * 0.05}s` }}>
-              <div className="monitor-card-header">
-                <div className="monitor-info-main">
-                  <h4>{eq.nome}</h4>
-                  <span className="monitor-info-sub">{eq.setor} • ID: #{eq.id}</span>
-                </div>
-                {isTemp && (
-                  <div className={`status-pill ${eq.em_degelo ? 'defrost' : (eq.motor_ligado ? 'on' : 'off')}`}>
-                    {eq.em_degelo ? <Snowflake size={14} /> : <Power size={14} />}
-                    {eq.em_degelo ? 'DEGELO' : (eq.motor_ligado ? 'ATIVO' : 'FALHA')}
+            if (!temDados) {
+              status = 'OFFLINE'; statusCor = 'var(--warning)'; IconeStatus = WifiOff; statusLabel = 'Sem Comunicação';
+            } else if (eq.em_degelo) {
+              status = 'DEGELO'; statusCor = '#0ea5e9'; IconeStatus = Snowflake; statusLabel = 'Ciclo de Degelo';
+            } else if (!eq.motor_ligado) {
+              status = 'PARADO'; statusCor = 'var(--danger)'; IconeStatus = Power; statusLabel = 'Motor Parado';
+            } else if (isAcima) {
+              status = 'ALERTA'; statusCor = 'var(--danger)'; IconeStatus = ArrowUpRight; statusLabel = isTemp ? 'Alta Temperatura' : 'Alta Humidade';
+            } else if (isAbaixo) {
+              status = 'ALERTA'; statusCor = '#38bdf8'; IconeStatus = ArrowDownRight; statusLabel = isTemp ? 'Baixa Temperatura' : 'Baixa Humidade';
+            }
+
+            // Cálculo Inteligente do Ponteiro (Com margem visual de 20% para fora dos limites)
+            let position = 50;
+            if (temDados && max !== min) {
+              const range = max - min;
+              const visualMin = min - (range * 0.2); 
+              const visualMax = max + (range * 0.2);
+              const visualRange = visualMax - visualMin;
+              
+              const calcPos = ((val - visualMin) / visualRange) * 100;
+              position = Math.max(0, Math.min(100, calcPos)); 
+            }
+
+            return (
+              <div key={eq.id} className={`monitor-card status-${status.toLowerCase()}`}>
+                <div className="monitor-card-header">
+                  <div className="monitor-title-box">
+                    <span className="monitor-setor">{eq.setor}</span>
+                    <h4 title={eq.nome}>{eq.nome}</h4>
                   </div>
-                )}
-              </div>
-
-              <div className="value-display-wrapper">
-                <div className="current-value">
-                  {temDados ? val.toFixed(1) : '--'}<span className="current-unit">{isTemp ? '°C' : '%'}</span>
+                  <div className={`status-badge badge-${status.toLowerCase()}`}>
+                    <IconeStatus size={14}/> {statusLabel}
+                  </div>
                 </div>
-                {isFora ? (
-                  <AlertOctagon size={36} color="var(--danger)" style={{ filter: 'drop-shadow(0 0 8px rgba(239,68,68,0.5))' }} />
-                ) : (
-                  <Gauge size={36} color={temDados ? "var(--primary)" : "var(--text-muted)"} style={{ opacity: 0.3 }} />
-                )}
-              </div>
 
-              <div className="thermal-container" style={{ marginTop: '10px' }}>
-                <div className="thermal-limits" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>
-                  <span>MÍN: {min.toFixed(1)}{isTemp ? '°' : '%'}</span>
-                  <span>MÁX: {max.toFixed(1)}{isTemp ? '°' : '%'}</span>
+                <div className="monitor-leitura-principal">
+                  {temDados ? (
+                    <span className={`valor-destaque ${isFora && !eq.em_degelo ? 'piscar-alerta' : ''}`} style={{ color: statusCor }}>
+                      {val.toFixed(1)}{unit}
+                    </span>
+                  ) : (
+                    <span className="valor-destaque" style={{ color: 'var(--text-muted)' }}>--{unit}</span>
+                  )}
                 </div>
-                <div className="thermal-track" style={{ height: '8px', background: 'var(--border)', borderRadius: '10px', position: 'relative', margin: '10px 0' }}>
-                  <div 
-                    className="thermal-pointer" 
-                    style={{ 
-                        position: 'absolute', top: '50%', transform: 'translate(-50%, -50%)', 
-                        width: '14px', height: '14px', background: 'white', borderRadius: '50%',
-                        border: `3px solid ${temDados ? statusCor : 'var(--border)'}`,
-                        left: `${position}%`, transition: 'left 0.8s ease'
-                    }}
-                  ></div>
-                </div>
-              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <MapPin size={14}/> {eq.filial || 'Unidade Local'}
-                </span>
-                {!temDados ? (
-                  <span style={{ fontSize: '0.7rem', color: 'var(--warning)', fontWeight: '800' }}>AGUARDANDO DADOS DOS SENSORES...</span>
-                ) : isFora && (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--danger)', fontWeight: '800', letterSpacing: '0.5px' }}>FORA DE PARÂMETROS</span>
-                )}
+                {/* LIMITES E GAUGE TÉRMICO */}
+                <div className="monitor-limites">
+                  <div className="limites-text">
+                    <span>Min: {min.toFixed(1)}{unit}</span>
+                    <span>Max: {max.toFixed(1)}{unit}</span>
+                  </div>
+                  
+                  <div className="thermal-track">
+                    <div className="thermal-gradient-bg"></div>
+                    {temDados && (
+                      <div 
+                        className="thermal-pointer" 
+                        style={{ 
+                          border: `3px solid ${statusCor}`,
+                          left: `${position}%`, 
+                          transition: 'left 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}
+                      ></div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="monitor-footer">
+                  <span className="monitor-filial">
+                    <MapPin size={14}/> {eq.filial || 'Unidade Local'}
+                  </span>
+                  
+                  {!temDados ? (
+                    <span className="footer-alerta warning">AGUARDANDO SENSORES</span>
+                  ) : isAcima && !eq.em_degelo ? (
+                    <span className="footer-alerta danger">ACIMA DO LIMITE</span>
+                  ) : isAbaixo && !eq.em_degelo ? (
+                    <span className="footer-alerta" style={{color: '#38bdf8'}}>ABAIXO DO LIMITE</span>
+                  ) : eq.em_degelo ? (
+                    <span className="footer-alerta info">EM MANUTENÇÃO TÉRMICA</span>
+                  ) : (
+                    <span className="footer-alerta success">DENTRO DA NORMA</span>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

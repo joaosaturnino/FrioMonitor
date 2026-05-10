@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, Component } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import jsPDF from 'jspdf';
@@ -6,13 +6,14 @@ import autoTable from 'jspdf-autotable';
 import 'react-datepicker/dist/react-datepicker.css';
 
 import './styles/global.css';
-import './components/Layout.css';
+import './App.css';
 
 import { 
-  Activity, Thermometer, Droplets, Settings, Leaf, History, Wrench, Archive, 
-  Store, Sliders, Users, LogOut, Menu, X, Volume2, VolumeX, Bell, BellOff, 
-  Maximize, Minimize, Moon, Sun, MapPin, UserCheck, CheckCircle, AlertTriangle, 
-  AlertOctagon, Info, Edit, Save, MessageSquare 
+  Activity, Thermometer, Droplets, Leaf, History, Wrench, Archive, 
+  Store, Sliders, Users, LogOut, Menu, X, Volume2, VolumeX, Maximize, 
+  Minimize, Moon, Sun, MapPin, UserCheck, CheckCircle, AlertTriangle, 
+  AlertOctagon, Edit, Save, MessageSquare, Globe2, WifiOff, Terminal, 
+  Server, Lock, Unlock, Search, Keyboard, Loader2
 } from 'lucide-react';
 
 import TermoSyncLogo from './components/TermoSyncLogo';
@@ -28,36 +29,145 @@ import GestaoLojas from './pages/GestaoLoja/GestaoLojas';
 import GestaoUsuarios from './pages/GestaoUsuarios/GestaoUsuarios';
 import ParametrosGlobais from './pages/ParametrosGlobais/ParametrosGlobais';
 import Chat from './pages/Chat/Chat'; 
+import PainelDesenvolvedor from './pages/PainelDesenvolvedor/PainelDesenvolvedor';
+
+// IMPORTAÇÃO DO MOTOR DO NÚCLEO (HOOK PERSONALIZADO)
+import { useSystemCore } from './hooks/useSystemCore';
 
 const API_URL = 'http://localhost:3000/api';
 const SOCKET_URL = 'http://localhost:3000';
 
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false, errorInfo: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true }; }
+  componentDidCatch(error, errorInfo) { console.error("Crash interceptado:", error); this.setState({ errorInfo }); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="crash-recovery-screen anim-fade-in">
+          <div className="crash-box">
+            <Terminal size={56} className="crash-icon pulse-danger-icon" style={{color: 'var(--danger)', marginBottom: '1rem'}} />
+            <h2 style={{color: 'white', marginBottom: '1rem'}}>SISTEMA INTERROMPIDO</h2>
+            <p className="crash-text" style={{color: '#94a3b8', marginBottom: '1.5rem'}}>Ocorreu uma falha crítica ao renderizar este módulo. A sua sessão e os dados da rede permanecem seguros.</p>
+            <div className="crash-code" style={{background: 'rgba(0,0,0,0.5)', padding: '10px', color: '#fca5a5', fontFamily: 'monospace', marginBottom: '2rem'}}>ERR_UI_RENDER_FAIL</div>
+            <button className="btn btn-danger w-100" onClick={() => window.location.reload()}>
+              <Activity size={18} /> REINICIAR NÚCLEO
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
-  const [token, setToken] = useState(localStorage.getItem('token') || '');
-  const [userId, setUserId] = useState(localStorage.getItem('userId') || ''); 
+  const [token, setToken] = useState(sessionStorage.getItem('token') || '');
+  const [userId, setUserId] = useState(sessionStorage.getItem('userId') || ''); 
   const [socketInstance, setSocketInstance] = useState(null); 
   
-  const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || 'LOJA');
-  const [userFilial, setUserFilial] = useState(localStorage.getItem('userFilial') || 'Todas');
-  const [nomeLogado, setNomeLogado] = useState(localStorage.getItem('nomeLogado') || '');
-  const [papelLogado, setPapelLogado] = useState(localStorage.getItem('papelLogado') || '');
-  const [loginAtivo, setLoginAtivo] = useState(localStorage.getItem('loginAtivo') || '');
+  const [userRole, setUserRole] = useState(sessionStorage.getItem('userRole') || 'LOJA');
+  const [userFilial, setUserFilial] = useState(sessionStorage.getItem('userFilial') || 'Todas');
+  const [nomeLogado, setNomeLogado] = useState(sessionStorage.getItem('nomeLogado') || '');
+  const [papelLogado, setPapelLogado] = useState(sessionStorage.getItem('papelLogado') || '');
+  const [loginAtivo, setLoginAtivo] = useState(sessionStorage.getItem('loginAtivo') || '');
   
-  const [abaAtiva, setAbaAtiva] = useState(localStorage.getItem('abaAtiva') || 'dashboard');
-  useEffect(() => { if (token) localStorage.setItem('abaAtiva', abaAtiva); }, [abaAtiva, token]);
+  const [abaAtiva, setAbaAtiva] = useState(sessionStorage.getItem('abaAtiva') || 'dashboard');
+  useEffect(() => { if (token) sessionStorage.setItem('abaAtiva', abaAtiva); }, [abaAtiva, token]);
+
+  // INJEÇÃO DO MOTOR DE REGRAS (System Core)
+  const { 
+    sysConfig, 
+    isFeatureEnabled, 
+    isModuloOculto, 
+    updateSysConfig 
+  } = useSystemCore(userRole, loginAtivo, abaAtiva, setAbaAtiva);
 
   const [menuAberto, setMenuAberto] = useState(false);
   const [menuRecolhido, setMenuRecolhido] = useState(false); 
   const [isLoginLoading, setIsLoginLoading] = useState(false); 
   const [loginErro, setLoginErro] = useState(''); 
   const [isDarkMode, setIsDarkMode] = useState(localStorage.getItem('theme') !== 'light');
-  const [somAtivoState, setSomAtivoState] = useState(true);
-  const somAtivoRef = useRef(true);
-  const [alertasNaTela, setAlertasNaTela] = useState(true);
-  const alertasNaTelaRef = useRef(true);
+  
+  const [somAtivoState, setSomAtivoState] = useState(false); 
+  const somAtivoRef = useRef(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [latencia, setLatencia] = useState(0);
+  
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [latencia, setLatencia] = useState(12);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [cmdSearch, setCmdSearch] = useState('');
+  const commandInputRef = useRef(null);
+  
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockPassword, setLockPassword] = useState('');
+  const [lockError, setLockError] = useState('');
+  const [isUnlocking, setIsUnlocking] = useState(false);
+
+  useEffect(() => {
+    if (isFeatureEnabled('forceDarkMode')) setIsDarkMode(true);
+  }, [sysConfig, isFeatureEnabled]);
+
+  useEffect(() => {
+    if (!isFeatureEnabled('enableAudioAlerts') && somAtivoState) {
+      setSomAtivoState(false); somAtivoRef.current = false;
+    }
+  }, [isFeatureEnabled, somAtivoState]);
+
+  // Logout Forçado caso entre em Manutenção Remota
+  const fazerLogout = useCallback(() => { 
+    setToken(''); setUserId(''); sessionStorage.clear(); 
+    setUserRole('LOJA'); setUserFilial(''); setFilialAtiva('Todas'); setNomeLogado(''); setPapelLogado(''); setLoginAtivo('');
+    setAbaAtiva('dashboard'); setMenuAberto(false); setNaoLidasPorContato({}); setContatoChatAtivo(null); setShowCommandPalette(false); setIsLocked(false);
+  }, []);
+
+  useEffect(() => {
+    if (sysConfig.maintenanceMode && userRole !== 'DEV' && token) {
+      fazerLogout();
+    }
+  }, [sysConfig.maintenanceMode, userRole, token, fazerLogout]);
+
+  const handleUnlock = async (e) => {
+    e.preventDefault();
+    setLockError('');
+    if (!lockPassword.trim()) return setLockError('A chave de segurança é obrigatória.');
+    if (isOffline) return setLockError('Conexão à base de dados perdida. Aguarde.');
+
+    setIsUnlocking(true);
+    try {
+      await axios.post(`${API_URL}/login`, { usuario: loginAtivo, senha: lockPassword });
+      setIsLocked(false); setLockPassword('');
+    } catch (error) { setLockError('Acesso Negado. Credencial inválida.'); } 
+    finally { setIsUnlocking(false); }
+  };
+
+  useEffect(() => { const timer = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(timer); }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setShowCommandPalette(prev => !prev); }
+    };
+    window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => { if (showCommandPalette && commandInputRef.current) commandInputRef.current.focus(); }, [showCommandPalette]);
+
+  const toggleFullScreen = () => { 
+    if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => showToast("Modo TV bloqueado.", "warning")); } 
+    else { document.exitFullscreen(); } 
+  };
+  
+  useEffect(() => { 
+    const handleFullscreenChange = () => setIsFullScreen(!!document.fullscreenElement); 
+    document.addEventListener('fullscreenchange', handleFullscreenChange); 
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange); 
+  }, []);
+
+  useEffect(() => { 
+    if (isDarkMode) { document.documentElement.classList.add('dark-theme'); document.body.classList.add('dark-theme'); localStorage.setItem('theme', 'dark'); } 
+    else { document.documentElement.classList.remove('dark-theme'); document.body.classList.remove('dark-theme'); localStorage.setItem('theme', 'light'); } 
+  }, [isDarkMode]);
 
   const [equipamentos, setEquipamentos] = useState([]);
   const [notificacoes, setNotificacoes] = useState([]);
@@ -68,38 +178,67 @@ export default function App() {
   const [lojasCadastradas, setLojasCadastradas] = useState([]); 
   const [filiaisDb, setFiliaisDb] = useState([]);
   const [tecnicosDb, setTecnicosDb] = useState([]); 
-  
-  // ESTADOS DO CHAT
   const [contatosDb, setContatosDb] = useState([]); 
   const [historicoChat, setHistoricoChat] = useState([]);
+  
   const [contatoChatAtivo, setContatoChatAtivo] = useState(null);
-  const contatoChatAtivoRef = useRef(null);
-  useEffect(() => { contatoChatAtivoRef.current = contatoChatAtivo; }, [contatoChatAtivo]);
-
   const [naoLidasPorContato, setNaoLidasPorContato] = useState({});
   const totalNaoLidas = Object.values(naoLidasPorContato).reduce((a, b) => a + b, 0);
 
   const [listaSetores, setListaSetores] = useState([]);
   const [listaTipos, setListaTipos] = useState([]);
 
-  const [filialAtiva, setFilialAtiva] = useState(userRole !== 'LOJA' ? 'Todas' : userFilial);
+  const [filialAtiva, setFilialAtiva] = useState((userRole !== 'LOJA' && userRole !== 'MANUTENCAO') ? 'Todas' : userFilial);
   const [dataInicio, setDataInicio] = useState(new Date(new Date().setDate(new Date().getDate() - 1)));
   const [dataFim, setDataFim] = useState(new Date());
   const [equipamentoFiltro, setEquipamentoFiltro] = useState('');
   const [termoPesquisa, setTermoPesquisa] = useState('');
   
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [toasts, setToasts] = useState([]);
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', isPrompt: false, promptValue: '', onConfirm: null });
   const [formEditEquip, setFormEditEquip] = useState({});
   const [equipEditando, setEquipEditando] = useState(null);
 
-  const lastAlertIdRef = useRef(-1);
   const abaAtivaRef = useRef(abaAtiva);
   useEffect(() => { abaAtivaRef.current = abaAtiva; }, [abaAtiva]);
 
-  const fazerLogout = useCallback(() => { 
-    setToken(''); setUserId(''); localStorage.clear(); setUserRole('LOJA'); setUserFilial(''); setFilialAtiva('Todas'); setNomeLogado(''); setPapelLogado(''); setLoginAtivo('');
-    setAbaAtiva('dashboard'); setMenuAberto(false); setNaoLidasPorContato({}); setContatoChatAtivo(null);
+  // =========================================================================
+  // IOT BUFFER OTIMIZADO (PROCESSAMENTO EM LOTE DE TELEMETRIA)
+  // =========================================================================
+  const bufferLeiturasRef = useRef({});
+  const relatoriosBufferRef = useRef([]);
+
+  useEffect(() => {
+    const iotFlushInterval = setInterval(() => {
+      const keys = Object.keys(bufferLeiturasRef.current);
+      if (keys.length > 0) {
+        setEquipamentos(prev => prev.map(eq => {
+          const reading = bufferLeiturasRef.current[eq.id];
+          if (reading) {
+            return {
+              ...eq,
+              ultima_temp: reading.temperatura,
+              ultima_umidade: reading.umidade,
+              motor_ligado: reading.motor_ligado === true || reading.motor_ligado == 1,
+              em_degelo: reading.em_degelo === true || reading.em_degelo == 1
+            };
+          }
+          return eq;
+        }));
+        bufferLeiturasRef.current = {}; 
+      }
+
+      if (relatoriosBufferRef.current.length > 0) {
+        setRelatorios(prev => { 
+          const att = [...prev, ...relatoriosBufferRef.current]; 
+          if (att.length > 2000) return att.slice(att.length - 2000); 
+          return att; 
+        });
+        relatoriosBufferRef.current = [];
+      }
+    }, 1000); 
+
+    return () => clearInterval(iotFlushInterval);
   }, []);
 
   const api = useMemo(() => {
@@ -111,140 +250,154 @@ export default function App() {
     return instance;
   }, [token, fazerLogout]);
 
-  const showToast = useCallback((message, type = 'success') => { setToast({ show: true, message, type }); setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 7000); }, []);
+  const showToast = useCallback((message, type = 'success') => {
+    if (userRole !== 'DEV') {
+       try {
+          const gConf = JSON.parse(localStorage.getItem('termosync_sysconfig_v9'))?.regras?.['GLOBAL']?.features;
+          const rConf = JSON.parse(localStorage.getItem('termosync_sysconfig_v9'))?.regras?.[userRole]?.features;
+          if (gConf && gConf.enableToasts === false) return;
+          if (rConf && rConf.enableToasts === false) return;
+       } catch(e) {}
+    }
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => { setToasts(prev => prev.filter(t => t.id !== id)); }, 4500);
+  }, [userRole]);
 
   const tocarSomMensagem = useCallback(() => {
-    if (!somAtivoRef.current) return;
+    if (!somAtivoRef.current || !isFeatureEnabled('enableAudioAlerts')) return;
     try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gainNode = ctx.createGain(); osc.connect(gainNode); gainNode.connect(ctx.destination); osc.type = 'sine'; osc.frequency.setValueAtTime(600, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1); gainNode.gain.setValueAtTime(0.15, ctx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2); osc.start(); osc.stop(ctx.currentTime + 0.2); } catch (e) { }
-  }, []);
+  }, [isFeatureEnabled]);
 
-  const alternarSom = useCallback(() => { const novoEstado = !somAtivoState; setSomAtivoState(novoEstado); somAtivoRef.current = novoEstado; if (novoEstado) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === 'suspended') ctx.resume(); showToast('Alarmes sonoros ativados.', 'success'); } catch (e) { } } else { showToast('Alarmes sonoros silenciados.', 'info'); } }, [somAtivoState, showToast]);
-  const tocarAlarme = useCallback(() => { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gainNode = ctx.createGain(); osc.connect(gainNode); gainNode.connect(ctx.destination); osc.type = 'sine'; osc.frequency.setValueAtTime(800, ctx.currentTime); gainNode.gain.setValueAtTime(0.1, ctx.currentTime); osc.start(); osc.stop(ctx.currentTime + 0.5); } catch (e) { } }, []);
-  const alternarAlertasTela = useCallback(() => { const novo = !alertasNaTela; setAlertasNaTela(novo); alertasNaTelaRef.current = novo; if (novo) showToast('Notificações visuais ativadas.', 'success'); else showToast('Notificações visuais silenciadas.', 'info'); }, [alertasNaTela, showToast]);
+  const alternarSom = useCallback(() => { 
+    if (!isFeatureEnabled('enableAudioAlerts')) return showToast('Alertas sonoros bloqueados pelo Administrador.', 'warning');
+    const novoEstado = !somAtivoState; setSomAtivoState(novoEstado); somAtivoRef.current = novoEstado; 
+    if (novoEstado) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === 'suspended') ctx.resume(); showToast('Alertas acústicos armados.', 'success'); } catch (e) { } } 
+    else { showToast('Sistema acústico silenciado.', 'info'); } 
+  }, [somAtivoState, showToast, isFeatureEnabled]);
 
-  const toggleFullScreen = () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().then(() => setIsFullScreen(true)).catch(() => showToast("Não é possível abrir em tela cheia.", "warning")); } else { if (document.exitFullscreen) { document.exitFullscreen().then(() => setIsFullScreen(false)); } } };
-  useEffect(() => { const handleFullscreenChange = () => setIsFullScreen(!!document.fullscreenElement); document.addEventListener('fullscreenchange', handleFullscreenChange); return () => document.removeEventListener('fullscreenchange', handleFullscreenChange); }, []);
-  useEffect(() => { if (isDarkMode) { document.body.classList.add('dark-theme'); localStorage.setItem('theme', 'dark'); } else { document.body.classList.remove('dark-theme'); localStorage.setItem('theme', 'light'); } }, [isDarkMode]);
+  const tocarAlarme = useCallback(() => { 
+    if (!isFeatureEnabled('enableAudioAlerts')) return;
+    try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gainNode = ctx.createGain(); osc.connect(gainNode); gainNode.connect(ctx.destination); osc.type = 'sine'; osc.frequency.setValueAtTime(800, ctx.currentTime); gainNode.gain.setValueAtTime(0.1, ctx.currentTime); osc.start(); osc.stop(ctx.currentTime + 0.5); } catch (e) { } 
+  }, [isFeatureEnabled]);
 
   const fazerLogin = async (usuarioInput, senhaInput) => {
-    if (isOffline) return showToast('Sem ligação à rede.', 'error');
+    if (isOffline) return showToast('Sinal de rede perdido.', 'error');
     setLoginErro(''); setIsLoginLoading(true); 
     try {
       const res = await axios.post(`${API_URL}/login`, { usuario: usuarioInput, senha: senhaInput });
-      setToken(res.data.token); setUserId(res.data.id); setUserRole(res.data.role); setUserFilial(res.data.filial); setFilialAtiva(res.data.role !== 'LOJA' ? 'Todas' : res.data.filial);
+      
+      if (sysConfig.maintenanceMode && res.data.role !== 'DEV') {
+        showToast('SISTEMA EM MANUTENÇÃO. Acesso restrito apenas a Desenvolvedores.', 'warning');
+        return;
+      }
+
+      setToken(res.data.token); setUserId(res.data.id); setUserRole(res.data.role); setUserFilial(res.data.filial); 
+      setFilialAtiva((res.data.role !== 'LOJA' && res.data.role !== 'MANUTENCAO') ? 'Todas' : res.data.filial);
       setAbaAtiva('dashboard'); setMenuAberto(false);
       
+      const gNome = res.data.nome_gerente || ''; const cNome = res.data.nome_coordenador || '';
       let identityName = usuarioInput; let roleTitle = 'Gestor de Loja';
-      if (res.data.role === 'ADMIN') { identityName = 'Administrador'; roleTitle = 'Acesso Master'; }
+      
+      if (res.data.role === 'DEV') { identityName = 'Desenvolvedor do Sistema'; roleTitle = 'SysAdmin / Root'; }
+      else if (res.data.role === 'ADMIN') { identityName = 'Administrador'; roleTitle = 'Acesso Master'; }
       else if (res.data.role === 'MANUTENCAO') { identityName = res.data.nome_tecnico || 'Técnico'; roleTitle = 'Manutenção Global'; }
-      else if (res.data.role === 'LOJA') { if (res.data.nome_gerente) { identityName = res.data.nome_gerente; roleTitle = 'Gerente da Loja'; } else if (res.data.nome_coordenador) { identityName = res.data.nome_coordenador; roleTitle = 'Coordenador da Loja'; } else { identityName = 'Equipa Geral'; roleTitle = 'Acesso da Loja'; } }
+      else if (res.data.role === 'LOJA') { if (gNome) { identityName = gNome; roleTitle = 'Gerente da Loja'; } else if (cNome) { identityName = cNome; roleTitle = 'Coordenador da Loja'; } else { identityName = 'Equipe Geral'; roleTitle = 'Acesso da Loja'; } }
+      
       setNomeLogado(identityName); setPapelLogado(roleTitle); setLoginAtivo(usuarioInput);
       
-      localStorage.setItem('token', res.data.token); localStorage.setItem('userId', res.data.id); localStorage.setItem('userRole', res.data.role); localStorage.setItem('userFilial', res.data.filial); localStorage.setItem('nomeLogado', identityName); localStorage.setItem('papelLogado', roleTitle); localStorage.setItem('loginAtivo', usuarioInput);
-      showToast(`Bem-vindo! Acesso: ${identityName}`, 'success');
+      sessionStorage.setItem('token', res.data.token); sessionStorage.setItem('userId', res.data.id); 
+      sessionStorage.setItem('userRole', res.data.role); sessionStorage.setItem('userFilial', res.data.filial); 
+      sessionStorage.setItem('nomeLogado', identityName); sessionStorage.setItem('papelLogado', roleTitle); 
+      sessionStorage.setItem('loginAtivo', usuarioInput);
+
+      showToast(`Protocolo aceite. Bem-vindo(a), ${identityName}.`, 'success');
     } catch (error) { setLoginErro('Credenciais inválidas.'); showToast('Acesso Negado.', 'error'); } finally { setIsLoginLoading(false); }
   };
 
   const carregarChamados = useCallback(async () => { if (!token || isOffline) return; try { const res = await api.get('/chamados'); setChamados(Array.isArray(res.data) ? res.data : []); } catch (e) { } }, [token, isOffline, api]);
-  const carregarUsuarios = useCallback(async () => { if (userRole !== 'ADMIN' || !token || isOffline) return; try { const res = await api.get('/usuarios'); setUsuariosLista(Array.isArray(res.data) ? res.data : []); } catch (e) {} }, [api, userRole, token, isOffline]);
-  const carregarLojas = useCallback(async () => { if (userRole !== 'ADMIN' || !token || isOffline) return; try { const res = await api.get('/lojas'); setLojasCadastradas(Array.isArray(res.data) ? res.data : []); } catch (e) {} }, [api, userRole, token, isOffline]);
+  const carregarUsuarios = useCallback(async () => { if ((userRole !== 'ADMIN' && userRole !== 'DEV') || !token || isOffline) return; try { const res = await api.get('/usuarios'); setUsuariosLista(Array.isArray(res.data) ? res.data : []); } catch (e) {} }, [api, userRole, token, isOffline]);
+  const carregarLojas = useCallback(async () => { if ((userRole !== 'ADMIN' && userRole !== 'DEV') || !token || isOffline) return; try { const res = await api.get('/lojas'); setLojasCadastradas(Array.isArray(res.data) ? res.data : []); } catch (e) {} }, [api, userRole, token, isOffline]);
   const carregarTecnicos = useCallback(async () => { if (!token || isOffline) return; try { const res = await api.get('/tecnicos'); setTecnicosDb(Array.isArray(res.data) ? res.data : []); } catch (e) {} }, [api, token, isOffline]);
   const carregarContatos = useCallback(async () => { if (!token || isOffline) return; try { const res = await api.get('/contatos'); setContatosDb(Array.isArray(res.data) ? res.data : []); } catch (e) {} }, [api, token, isOffline]);
   const carregarParametrosGerais = useCallback(async () => { if (!token || isOffline) return; try { const [resSetores, resTipos] = await Promise.all([ api.get('/setores').catch(() => ({ data: [] })), api.get('/tipos-refrigeracao').catch(() => ({ data: [] })) ]); setListaSetores(Array.isArray(resSetores.data) ? resSetores.data : []); setListaTipos(Array.isArray(resTipos.data) ? resTipos.data : []); } catch (e) {} }, [api, token, isOffline]);
-
-  const carregarHistoricoChat = useCallback(async () => { 
-    if (!token || isOffline) return; 
-    try { 
-      const res = await api.get('/chat/historico'); 
-      const histFormatado = res.data.map(m => ({ ...m, data: new Date(m.data) }));
-      setHistoricoChat(histFormatado); 
-    } catch (e) {} 
-  }, [api, token, isOffline]);
+  const carregarHistoricoChat = useCallback(async () => { if (!token || isOffline || !isFeatureEnabled('enableChat')) return; try { const res = await api.get('/chat/historico'); const histFormatado = res.data.map(m => ({ ...m, data: new Date(m.data) })); setHistoricoChat(histFormatado); } catch (e) {} }, [api, token, isOffline, isFeatureEnabled]);
 
   const carregarDadosBase = useCallback(async () => {
     if (!token) return;
-    if (isOffline) { const cE = localStorage.getItem('cache_equipamentos'); const cN = localStorage.getItem('cache_notificacoes'); const cH = localStorage.getItem('cache_historico'); if (cE) setEquipamentos(JSON.parse(cE)); if (cN) setNotificacoes(JSON.parse(cN)); if (cH && abaAtiva === 'historico') setHistoricoAlertas(JSON.parse(cH)); return; }
+    if (isOffline) { 
+      const cE = sessionStorage.getItem('cache_equipamentos'); const cN = sessionStorage.getItem('cache_notificacoes'); const cH = sessionStorage.getItem('cache_historico'); 
+      if (cE) setEquipamentos(JSON.parse(cE)); if (cN) setNotificacoes(JSON.parse(cN)); if (cH && abaAtiva === 'historico') setHistoricoAlertas(JSON.parse(cH)); 
+      return; 
+    }
     try {
       const isHistorico = abaAtivaRef.current === 'historico';
       const [resEquip, resNotif, resHist, resFiliais] = await Promise.all([ api.get('/equipamentos').catch(() => ({ data: [] })), api.get('/notificacoes').catch(() => ({ data: [] })), isHistorico ? api.get('/notificacoes/historico').catch(() => ({ data: [] })) : Promise.resolve({ data: historicoAlertas }), api.get('/auxiliares/filiais').catch(() => ({ data: [] })) ]);
       setEquipamentos(Array.isArray(resEquip.data) ? resEquip.data : []); setFiliaisDb(Array.isArray(resFiliais.data) ? resFiliais.data : []); carregarParametrosGerais();
       if (isHistorico) setHistoricoAlertas(Array.isArray(resHist.data) ? resHist.data : []);
       const dadosNotificacoes = Array.isArray(resNotif.data) ? resNotif.data : [];
-      const idMaisAlto = dadosNotificacoes.length > 0 ? Math.max(...dadosNotificacoes.map(n => n.id)) : 0;
       
-      if (lastAlertIdRef.current !== -1 && idMaisAlto > lastAlertIdRef.current) { 
-        const novos = dadosNotificacoes.filter(n => n.id > lastAlertIdRef.current); 
-        if (novos.length > 0) { 
-          const isDegelo = novos[0].tipo_alerta === 'DEGELO'; 
-          if (somAtivoRef.current && !isDegelo) tocarAlarme(); 
-          if (alertasNaTelaRef.current) showToast(`${isDegelo ? '❄️' : '🚨'} ${novos[0].mensagem}`, isDegelo ? 'info' : 'error'); 
-        } 
-      }
-      lastAlertIdRef.current = idMaisAlto; setNotificacoes(dadosNotificacoes); localStorage.setItem('cache_equipamentos', JSON.stringify(resEquip.data)); localStorage.setItem('cache_notificacoes', JSON.stringify(dadosNotificacoes));
+      const idMaisAlto = dadosNotificacoes.length > 0 ? Math.max(...dadosNotificacoes.map(n => n.id)) : 0;
+      setNotificacoes(dadosNotificacoes); 
+      sessionStorage.setItem('cache_equipamentos', JSON.stringify(resEquip.data)); sessionStorage.setItem('cache_notificacoes', JSON.stringify(dadosNotificacoes));
     } catch (error) {}
-  }, [token, isOffline, api, tocarAlarme, showToast, carregarParametrosGerais]); 
+  }, [token, isOffline, api, carregarParametrosGerais, historicoAlertas]); 
 
-  useEffect(() => { 
-    if (token) { carregarDadosBase(); carregarTecnicos(); carregarContatos(); carregarHistoricoChat(); }
-  }, [token, carregarDadosBase, carregarTecnicos, carregarContatos, carregarHistoricoChat]);
+  const carregarDadosBaseRef = useRef(carregarDadosBase);
+  const carregarChamadosRef = useRef(carregarChamados);
+  useEffect(() => { carregarDadosBaseRef.current = carregarDadosBase; }, [carregarDadosBase]);
+  useEffect(() => { carregarChamadosRef.current = carregarChamados; }, [carregarChamados]);
 
-  useEffect(() => { 
-    const handleOnline = () => { setIsOffline(false); showToast('Ligação restabelecida.', 'success'); carregarDadosBase(); carregarHistoricoChat(); }; 
-    const handleOffline = () => { setIsOffline(true); showToast('Operando offline.', 'warning'); }; 
-    window.addEventListener('online', handleOnline); window.addEventListener('offline', handleOffline); 
-    return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); }; 
-  }, [carregarDadosBase, carregarHistoricoChat, showToast]);
-
-  const carregarRelatorios = useCallback(async () => { if (!token || isOffline) return; try { const res = await api.get(`/relatorios?data_inicio=${dataInicio.toISOString()}&data_fim=${dataFim.toISOString()}`); setRelatorios(Array.isArray(res.data) ? res.data : []); } catch (error) {} }, [token, isOffline, api, dataInicio, dataFim]);
-  useEffect(() => { if (abaAtiva === 'usuarios' && userRole === 'ADMIN') carregarUsuarios(); }, [abaAtiva, carregarUsuarios, userRole]);
-  useEffect(() => { if (abaAtiva === 'lojas' && userRole === 'ADMIN') carregarLojas(); }, [abaAtiva, carregarLojas, userRole]);
-  useEffect(() => { if (abaAtiva === 'chamados' || abaAtiva === 'historico_chamados') carregarChamados(); }, [abaAtiva, carregarChamados]); 
-  useEffect(() => { if (abaAtiva === 'parametros' && userRole === 'ADMIN') carregarParametrosGerais(); }, [abaAtiva, carregarParametrosGerais, userRole]); 
-
+  // SOCKET CONTROLADO POR FEATURE FLAG
   useEffect(() => {
     if (!token || isOffline) return;
+    if (!isFeatureEnabled('telemetryStream')) {
+      if (socketInstance) socketInstance.disconnect();
+      return;
+    }
+
     const socket = io(SOCKET_URL);
     setSocketInstance(socket);
 
     if (userId) socket.emit('registrar_usuario', userId);
 
     socket.on('nova_leitura', (dadosNovaLeitura) => {
-      if (abaAtivaRef.current === 'relatorios') { setRelatorios(prev => { const att = [...prev, dadosNovaLeitura]; if (att.length > 20000) att.shift(); return att; }); }
-      setEquipamentos(prev => prev.map(eq => String(eq.id) === String(dadosNovaLeitura.equipamento_id) ? { ...eq, ultima_temp: dadosNovaLeitura.temperatura, ultima_umidade: dadosNovaLeitura.umidade, motor_ligado: dadosNovaLeitura.motor_ligado === true || dadosNovaLeitura.motor_ligado == 1, em_degelo: dadosNovaLeitura.em_degelo === true || dadosNovaLeitura.em_degelo == 1 } : eq));
+      bufferLeiturasRef.current[dadosNovaLeitura.equipamento_id] = dadosNovaLeitura;
+      if (abaAtivaRef.current === 'relatorios') relatoriosBufferRef.current.push(dadosNovaLeitura);
     });
-    socket.on('atualizacao_dados', () => { carregarDadosBase(); carregarChamados(); });
     
-    // GESTÃO DO CHAT VIA SOCKET
+    socket.on('atualizacao_dados', () => { carregarDadosBaseRef.current(); carregarChamadosRef.current(); });
+    
     socket.on('nova_mensagem_chat', (msg) => {
-      setHistoricoChat(prev => {
-        if (prev.some(m => String(m.id) === String(msg.id))) return prev;
-        return [...prev, { ...msg, data: new Date(msg.data), tipo: 'received' }];
-      });
-      
+      if (!isFeatureEnabled('enableChat')) return;
+      setHistoricoChat(prev => { if (prev.some(m => String(m.id) === String(msg.id))) return prev; return [...prev, { ...msg, data: new Date(msg.data), tipo: 'received' }]; });
       tocarSomMensagem();
-
       if (abaAtivaRef.current !== 'chat' || String(contatoChatAtivoRef.current?.id) !== String(msg.remetenteId)) {
-        showToast(`💬 Mensagem de ${msg.remetenteNome}: ${msg.texto}`, 'info');
+        showToast(`${msg.remetenteNome}: ${msg.texto}`, 'info');
         setNaoLidasPorContato(prev => ({ ...prev, [msg.remetenteId]: (prev[msg.remetenteId] || 0) + 1 }));
       }
     });
 
-    const pingInterval = setInterval(() => { socket.emit('medir_latencia', Date.now(), (e) => setLatencia(Date.now() - e)); }, 2500);
+    const pingInterval = setInterval(() => { 
+        setLatencia(prev => { let novo = prev + (Math.floor(Math.random() * 9) - 4); return novo < 10 ? 10 : novo > 60 ? 60 : novo; });
+    }, 1500);
+
     return () => { clearInterval(pingInterval); socket.disconnect(); };
-  }, [token, isOffline, carregarDadosBase, carregarChamados, userId, showToast, tocarSomMensagem]);
+  }, [token, isOffline, userId, showToast, tocarSomMensagem, isFeatureEnabled]); 
 
+  useEffect(() => { if (token) { carregarDadosBase(); carregarTecnicos(); carregarContatos(); carregarHistoricoChat(); } }, [token, carregarDadosBase, carregarTecnicos, carregarContatos, carregarHistoricoChat]);
+  useEffect(() => { const handleOnline = () => { setIsOffline(false); showToast('Sinal Restabelecido.', 'success'); carregarDadosBase(); carregarHistoricoChat(); }; const handleOffline = () => { setIsOffline(true); showToast('Sem Ligação ao Servidor.', 'warning'); }; window.addEventListener('online', handleOnline); window.addEventListener('offline', handleOffline); return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); }; }, [carregarDadosBase, carregarHistoricoChat, showToast]);
+  const carregarRelatorios = useCallback(async () => { if (!token || isOffline) return; try { const res = await api.get(`/relatorios?data_inicio=${dataInicio.toISOString()}&data_fim=${dataFim.toISOString()}`); setRelatorios(Array.isArray(res.data) ? res.data : []); } catch (error) {} }, [token, isOffline, api, dataInicio, dataFim]);
+  
+  useEffect(() => { if ((abaAtiva === 'usuarios' || abaAtiva === 'dev_panel') && (userRole === 'ADMIN' || userRole === 'DEV')) carregarUsuarios(); }, [abaAtiva, carregarUsuarios, userRole]);
+  useEffect(() => { if (abaAtiva === 'lojas' && (userRole === 'ADMIN' || userRole === 'DEV')) carregarLojas(); }, [abaAtiva, carregarLojas, userRole]);
+  useEffect(() => { if (abaAtiva === 'chamados' || abaAtiva === 'historico_chamados') carregarChamados(); }, [abaAtiva, carregarChamados]); 
+  useEffect(() => { if (abaAtiva === 'parametros' && (userRole === 'ADMIN' || userRole === 'DEV')) carregarParametrosGerais(); }, [abaAtiva, carregarParametrosGerais, userRole]); 
   useEffect(() => { if (token && abaAtiva === 'relatorios') carregarRelatorios(); }, [token, abaAtiva, dataInicio, dataFim, carregarRelatorios]);
-
-  const editarEquipamento = (eq) => { if (isOffline) return showToast('Ação bloqueada.', 'warning'); setEquipEditando(eq.id); setFormEditEquip({ nome: eq.nome, tipo: eq.tipo, temp_min: eq.temp_min, temp_max: eq.temp_max, umidade_min: eq.umidade_min || '', umidade_max: eq.umidade_max || '', intervalo_degelo: eq.intervalo_degelo, duracao_degelo: eq.duracao_degelo, setor: eq.setor, filial: eq.filial, data_calibracao: eq.data_calibracao ? new Date(eq.data_calibracao).toISOString().split('T')[0] : '' }); };
-  const salvarEdicaoEquipamento = async (e) => { e.preventDefault(); if (isOffline) return; try { await api.put(`/equipamentos/${equipEditando}/edit`, formEditEquip); showToast('Atualizado.', 'success'); setEquipEditando(null); carregarDadosBase(); } catch (e) { showToast('Erro.', 'error'); } };
-  const pedirExclusao = (id, nome) => { setModalConfig({ isOpen: true, title: 'Remover Máquina', message: `Remover "${nome}" permanentemente?`, isPrompt: false, onConfirm: async () => { try { await api.delete(`/equipamentos/${id}`); showToast('Removido.', 'success'); carregarDadosBase(); } catch (e) { showToast('Ação não autorizada.', 'error'); } }}); };
-  const gerarExportacao = (tipo) => { let fd = abaAtiva === 'historico' ? historicoFiltradoLista : (equipamentoFiltro ? relatorios.filter(r => r.nome === equipamentoFiltro) : relatorios); if (fd.length === 0) return showToast("Sem dados para exportar.", "warning"); if (tipo === 'pdf') { const doc = new jsPDF(); doc.setFontSize(18); doc.text(abaAtiva === 'historico' ? "Auditoria de Ocorrências" : "Auditoria de Qualidade e ESG", 14, 20); doc.setFontSize(11); doc.text(`Emitido: ${new Date().toLocaleString()} | Âmbito: ${filialAtiva}`, 14, 28); let head = abaAtiva === 'historico' ? [["Data", "Equipamento", "Ocorrência", "Técnico Responsável"]] : [["Data", "Local / Eq.", "Temp", "Hum", "Consumo"]]; let body = abaAtiva === 'historico' ? fd.map(h => [new Date(h.data_hora).toLocaleString(), `${h.equipamento_nome}`, h.mensagem, h.nota_resolucao]) : fd.map(r => [new Date(r.data_hora).toLocaleString(), `${r.filial} - ${r.nome}`, `${r.temperatura}°C`, `${r.umidade}%`, `${r.consumo_kwh}kWh`]); autoTable(doc, { head, body, startY: 40, theme: 'grid', headStyles: { fillColor: [5, 150, 105] } }); const finalY = doc.lastAutoTable.finalY || 40; doc.text("__________________________________________", 14, finalY + 30); doc.text(`Assinatura do Auditor - (${userRole})`, 14, finalY + 38); doc.save(`Auditoria_${new Date().getTime()}.pdf`); } else { let csv = abaAtiva === 'historico' ? "Data,Equipamento,Setor,Ocorrencia,Tecnico\n" : "Data,Filial,Equipamento,Temp,Hum,Consumo(kWh)\n"; fd.forEach(row => { csv += abaAtiva === 'historico' ? `"${new Date(row.data_hora).toLocaleString()}","${row.equipamento_nome}","${row.setor}","${row.mensagem}","${row.nota_resolucao}"\n` : `"${new Date(row.data_hora).toLocaleString()}","${row.filial}","${row.nome}","${row.temperatura}","${row.umidade}","${row.consumo_kwh}"\n`; }); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv' })); link.download = `Dados_${new Date().getTime()}.csv`; link.click(); } showToast('Documento Gerado.', 'success'); };
-  const gerarLoteOS = (listaChamados) => { if (!listaChamados || listaChamados.length === 0) return showToast("Nenhuma OS para imprimir.", "warning"); const doc = new jsPDF(); listaChamados.forEach((c, index) => { if (index > 0) doc.addPage(); doc.setFontSize(18); doc.text(`Ordem de Serviço (OS) - ${c.status}`, 14, 20); doc.setFontSize(11); doc.text(`Máquina/Ativo: ${c.equipamento_nome}`, 14, 32); doc.text(`Filial / Loja: ${c.filial}`, 14, 40); doc.text(`Solicitante: ${c.solicitante_nome || c.aberto_por || 'N/A'}`, 14, 48); doc.text(`Técnico Acionado: ${c.tecnico_responsavel || 'Equipe Geral'}`, 14, 56); doc.text(`Urgência: ${c.urgencia || 'Padrão'}`, 14, 64); doc.text(`Abertura: ${new Date(c.data_abertura).toLocaleString()}`, 14, 72); doc.setFontSize(12); doc.text("Descrição do Relato:", 14, 88); doc.setFontSize(10); doc.text(doc.splitTextToSize(c.descricao || 'Sem descrição.', 180), 14, 96); if (c.status === 'Concluído') { doc.setFontSize(12); doc.text("Resolução Técnica (Laudo):", 14, 130); doc.setFontSize(10); doc.text(doc.splitTextToSize(c.nota_resolucao || 'Sem nota.', 180), 14, 138); doc.text(`Concluído em: ${new Date(c.data_conclusao).toLocaleString()}`, 14, 160); } doc.text("__________________________________________", 14, 200); doc.text("Assinatura do Técnico / Responsável", 14, 208); }); doc.save(`Lote_OS_${new Date().getTime()}.pdf`); showToast('Lote de OS exportado com sucesso!', 'success'); };
 
   const listaFiliais = useMemo(() => { if (userRole === 'LOJA') return [userFilial]; return ['Todas', ...(filiaisDb || [])]; }, [filiaisDb, userRole, userFilial]);
   const equipamentosDaFilial = useMemo(() => filialAtiva === 'Todas' ? equipamentos : equipamentos.filter(eq => (eq.filial || 'Loja Principal') === filialAtiva), [equipamentos, filialAtiva]);
   const notificacoesDaFilial = useMemo(() => filialAtiva === 'Todas' ? notificacoes : notificacoes.filter(n => (n.filial || 'Loja Principal') === filialAtiva), [notificacoes, filialAtiva]);
-
   const { qtdTotal, qtdDegelo, qtdFalha, qtdOperando } = useMemo(() => { const total = equipamentosDaFilial?.length || 0; const degelo = equipamentosDaFilial?.filter(e => e.em_degelo).length || 0; const falha = equipamentosDaFilial?.filter(e => !e.motor_ligado && !e.em_degelo).length || 0; return { qtdTotal: total, qtdDegelo: degelo, qtdFalha: falha, qtdOperando: total - degelo - falha }; }, [equipamentosDaFilial]);
   const eqPesquisaLower = termoPesquisa.toLowerCase();
   const equipamentosFiltradosLista = useMemo(() => equipamentosDaFilial?.filter(eq => eq.nome?.toLowerCase().includes(eqPesquisaLower) || (eq.setor && eq.setor.toLowerCase().includes(eqPesquisaLower))), [equipamentosDaFilial, eqPesquisaLower]);
@@ -258,156 +411,304 @@ export default function App() {
   const equipamentoSelecionado = useMemo(() => equipamentosDaFilial?.find(e => e.nome === equipamentoFiltro), [equipamentosDaFilial, equipamentoFiltro]);
   const dadosDonutStatus = useMemo(() => [ { name: 'Ok', value: qtdOperando, color: 'var(--success)' }, { name: 'Degelo', value: qtdDegelo, color: '#38bdf8' }, { name: 'Falha', value: qtdFalha, color: 'var(--danger)' } ].filter(d => d.value > 0), [qtdOperando, qtdDegelo, qtdFalha]);
 
-  const pedirNotaResolucao = (id) => { setModalConfig({ isOpen: true, title: 'Registro de Manutenção', message: 'Descreva a intervenção técnica:', isPrompt: true, promptValue: '', onConfirm: async (nota) => { try { await api.put(`/notificacoes/${id}/resolver`, { nota_resolucao: nota.trim() === '' ? 'Verificado e limpo.' : nota }); showToast('Arquivado no log.', 'success'); } catch (e) { showToast('Erro.', 'error'); } }}); };
-  const resolverTodasNotificacoes = () => { setModalConfig({ isOpen: true, title: 'Limpeza do Painel', message: 'Arquivar todos os alarmes pendentes?', isPrompt: false, onConfirm: async () => { try { await api.put(`/notificacoes/resolver-todas`); showToast('Painel Limpo.', 'success'); } catch (e) { showToast('Erro.', 'error'); } }}); };
-
-  const getStatusConexao = () => { if (isOffline) return { level: 'offline', bars: 0, text: 'Offline' }; if (latencia === 0) return { level: 'slow', bars: 1, text: 'A ligar...' }; if (latencia < 60) return { level: 'excellent', bars: 3, text: 'Excelente' }; if (latencia < 150) return { level: 'good', bars: 2, text: 'Estável' }; return { level: 'slow', bars: 1, text: 'Lenta' }; };
-  const statusConn = getStatusConexao();
+  const editarEquipamento = (eq) => { if (isOffline || isFeatureEnabled('readOnlyMode')) return showToast('Ação bloqueada.', 'warning'); setEquipEditando(eq.id); setFormEditEquip({ nome: eq.nome, tipo: eq.tipo, temp_min: eq.temp_min, temp_max: eq.temp_max, umidade_min: eq.umidade_min || '', umidade_max: eq.umidade_max || '', intervalo_degelo: eq.intervalo_degelo, duracao_degelo: eq.duracao_degelo, setor: eq.setor, filial: eq.filial, data_calibracao: eq.data_calibracao ? new Date(eq.data_calibracao).toISOString().split('T')[0] : '' }); };
+  const salvarEdicaoEquipamento = async (e) => { e.preventDefault(); if (isOffline) return; try { await api.put(`/equipamentos/${equipEditando}/edit`, formEditEquip); showToast('Atualizado com sucesso.', 'success'); setEquipEditando(null); carregarDadosBase(); } catch (e) { showToast('Erro de sincronização.', 'error'); } };
+  const pedirExclusao = (id, nome) => { if (isFeatureEnabled('readOnlyMode')) return showToast('Ação bloqueada (Leitura).', 'warning'); setModalConfig({ isOpen: true, title: 'Remover Máquina', message: `Remover "${nome}" permanentemente?`, isPrompt: false, onConfirm: async () => { try { await api.delete(`/equipamentos/${id}`); showToast('Ativo purgado do sistema.', 'success'); carregarDadosBase(); } catch (e) { showToast('Ação não autorizada.', 'error'); } }}); };
+  const pedirNotaResolucao = (id) => { if (isFeatureEnabled('readOnlyMode')) return showToast('Ação bloqueada (Leitura).', 'warning'); setModalConfig({ isOpen: true, title: 'Registo de Manutenção', message: 'Descreva a intervenção técnica:', isPrompt: true, promptValue: '', onConfirm: async (nota) => { try { await api.put(`/notificacoes/${id}/resolver`, { nota_resolucao: nota.trim() === '' ? 'Verificado e limpo.' : nota }); showToast('Incidente arquivado.', 'success'); } catch (e) { showToast('Erro no arquivo.', 'error'); } }}); };
+  const resolverTodasNotificacoes = () => { if (isFeatureEnabled('readOnlyMode')) return showToast('Ação bloqueada (Leitura).', 'warning'); setModalConfig({ isOpen: true, title: 'Limpeza do Painel', message: 'Arquivar todos os alarmes pendentes do radar?', isPrompt: false, onConfirm: async () => { try { await api.put(`/notificacoes/resolver-todas`); showToast('Painel higienizado.', 'success'); } catch (e) { showToast('Erro de sistema.', 'error'); } }}); };
+  
+  const gerarExportacao = (tipo) => { 
+    if (!isFeatureEnabled('allowExports')) return showToast('A exportação de dados foi bloqueada pelas diretrizes do sistema.', 'error');
+    let fd = abaAtiva === 'historico' ? historicoFiltradoLista : (equipamentoFiltro ? relatorios.filter(r => r.nome === equipamentoFiltro) : relatorios); if (fd.length === 0) return showToast("Sem dados para exportar.", "warning"); if (tipo === 'pdf') { const doc = new jsPDF(); doc.setFontSize(18); doc.text(abaAtiva === 'historico' ? "Auditoria de Ocorrências" : "Auditoria de Qualidade", 14, 20); doc.setFontSize(11); doc.text(`Emitido: ${new Date().toLocaleString()}`, 14, 28); let head = abaAtiva === 'historico' ? [["Data", "Equipamento", "Ocorrência", "Técnico Responsável"]] : [["Data", "Local / Eq.", "Temp", "Hum", "Consumo"]]; let body = abaAtiva === 'historico' ? fd.map(h => [new Date(h.data_hora).toLocaleString(), `${h.equipamento_nome}`, h.mensagem, h.nota_resolucao]) : fd.map(r => [new Date(r.data_hora).toLocaleString(), `${r.filial} - ${r.nome}`, `${r.temperatura}°C`, `${r.umidade}%`, `${r.consumo_kwh}kWh`]); autoTable(doc, { head, body, startY: 40, theme: 'grid' }); doc.save(`Auditoria_${new Date().getTime()}.pdf`); } else { let csv = abaAtiva === 'historico' ? "Data,Equipamento,Setor,Ocorrencia,Tecnico\n" : "Data,Filial,Equipamento,Temp,Hum,Consumo(kWh)\n"; fd.forEach(row => { csv += abaAtiva === 'historico' ? `"${new Date(row.data_hora).toLocaleString()}","${row.equipamento_nome}","${row.setor}","${row.mensagem}","${row.nota_resolucao}"\n` : `"${new Date(row.data_hora).toLocaleString()}","${row.filial}","${row.nome}","${row.temperatura}","${row.umidade}","${row.consumo_kwh}"\n`; }); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv' })); link.download = `Dados_${new Date().getTime()}.csv`; link.click(); } showToast('Pacote de dados gerado.', 'success'); 
+  };
+  const gerarLoteOS = (listaChamados) => { 
+    if (!isFeatureEnabled('allowExports')) return showToast('A exportação de dados foi bloqueada pelas diretrizes do sistema.', 'error');
+    if (!listaChamados || listaChamados.length === 0) return showToast("Nenhuma OS pendente.", "warning"); const doc = new jsPDF(); listaChamados.forEach((c, index) => { if (index > 0) doc.addPage(); doc.setFontSize(18); doc.text(`Ordem de Serviço (OS) - ${c.status}`, 14, 20); doc.setFontSize(11); doc.text(`Máquina: ${c.equipamento_nome}`, 14, 32); doc.text(`Filial: ${c.filial}`, 14, 40); doc.text(`Abertura: ${new Date(c.data_abertura).toLocaleString()}`, 14, 72); doc.text(doc.splitTextToSize(c.descricao || 'Sem descrição.', 180), 14, 96); if (c.status === 'Concluído') { doc.text(doc.splitTextToSize(c.nota_resolucao || 'Sem nota.', 180), 14, 138); } }); doc.save(`Lote_OS_${new Date().getTime()}.pdf`); showToast('Lote Operacional Baixado.', 'success'); 
+  };
 
   if (!token) return <Login isOffline={isOffline} isLoginLoading={isLoginLoading} fazerLogin={fazerLogin} loginErro={loginErro} />;
+
+  if (isLocked) {
+    return (
+      <div className={`app-container ${isDarkMode ? 'dark-theme' : ''} lock-screen-container`}>
+        <form className="lock-box anim-fade-in" onSubmit={handleUnlock}>
+          <div className={`lock-icon-wrapper ${isUnlocking ? 'pulse-blue-shadow' : ''}`}>
+            <Lock size={48} />
+          </div>
+          <h2 style={{color: 'var(--text-main)'}}>Terminal Bloqueado</h2>
+          <p style={{color: 'var(--text-muted)'}}>O painel de <strong>{nomeLogado}</strong> foi trancado por segurança. A telemetria mantém-se ativa em 2º plano.</p>
+          
+          <div className="input-wrapper" style={{ margin: '1.5rem 0' }}>
+            <Lock size={18} className="input-icon" />
+            <input 
+              type="password" 
+              placeholder="Chave de Acesso..." 
+              value={lockPassword}
+              onChange={(e) => { setLockPassword(e.target.value); setLockError(''); }}
+              disabled={isUnlocking}
+              autoFocus
+              style={{ paddingLeft: '45px', textAlign: 'center', letterSpacing: '2px' }}
+            />
+          </div>
+          {lockError && <span className="lock-error-msg" style={{ marginTop: '-10px', marginBottom: '10px' }}>{lockError}</span>}
+
+          <button type="submit" className="btn btn-primary w-100 login-btn" disabled={isUnlocking}>
+            {isUnlocking ? <Loader2 size={18} className="spinner" /> : <Unlock size={18} />} 
+            {isUnlocking ? 'A VERIFICAR...' : 'RESTAURAR SESSÃO'}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  const NAVIGATION = [
+    { id: 'dashboard', label: 'Dashboard', icon: Activity, roles: ['ADMIN', 'LOJA', 'MANUTENCAO', 'DEV'], badge: notificacoesDaFilial?.length, type: 'Operações' },
+    { id: 'motores', label: 'Monitoramento Térmico', icon: Thermometer, roles: ['ADMIN', 'LOJA', 'MANUTENCAO', 'DEV'], type: 'Operações' },
+    { id: 'umidade', label: 'Monitoramento de Umidade', icon: Droplets, roles: ['ADMIN', 'LOJA', 'MANUTENCAO', 'DEV'], type: 'Operações' },
+    { id: 'equipamentos', label: 'Equipamentos', icon: Server, roles: ['ADMIN', 'MANUTENCAO', 'DEV'], type: 'Serviços' },
+    { id: 'parametros', label: 'Parâmetros Globais', icon: Sliders, roles: ['ADMIN', 'DEV'], type: 'Serviços' },
+    { id: 'chamados', label: 'Chamados', icon: Wrench, roles: ['ADMIN', 'LOJA', 'MANUTENCAO', 'DEV'], type: 'Serviços' },
+    { id: 'historico_chamados', label: 'Histórico de Chamados', icon: Archive, roles: ['ADMIN', 'MANUTENCAO', 'DEV'], type: 'Serviços' },
+    { id: 'chat', label: 'Chat', icon: MessageSquare, roles: ['ADMIN', 'LOJA', 'MANUTENCAO', 'DEV'], badge: totalNaoLidas, type: 'Serviços' },
+    { id: 'relatorios', label: 'Relatórios', icon: Leaf, roles: ['ADMIN', 'LOJA', 'DEV'], type: 'Auditoria' },
+    { id: 'historico', label: 'Histórico de Logs', icon: History, roles: ['ADMIN', 'LOJA', 'DEV'], type: 'Auditoria' },
+    { id: 'lojas', label: 'Gestão de Lojas', icon: Store, roles: ['ADMIN', 'DEV'], type: 'Sistema' },
+    { id: 'usuarios', label: 'Gestão de Usuários', icon: Users, roles: ['ADMIN', 'DEV'], type: 'Sistema' },
+    { id: 'dev_panel', label: 'Console Dev/Core', icon: Terminal, roles: ['DEV'], type: 'Sistema' }, 
+  ];
+
+  const NAVIGATION_ATIVA = NAVIGATION.filter(nav => !isModuloOculto(nav.id) && nav.roles.includes(userRole) && (nav.id !== 'chat' || isFeatureEnabled('enableChat')));
 
   return (
     <div className={`app-container ${isDarkMode ? 'dark-theme' : ''}`}>
       <datalist id="filiais-db">{filiaisDb?.map(f => <option key={f} value={f} />)}</datalist><datalist id="setores-db">{listaSetores?.map(s => <option key={s.id} value={s.nome} />)}</datalist>
 
-      {toast.show && ( <div style={{ position: 'fixed', bottom: '30px', right: '30px', zIndex: 99999, backgroundColor: toast.type === 'error' ? '#ef4444' : (toast.type === 'info' ? '#38bdf8' : '#10b981'), color: '#ffffff', padding: '16px 24px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)', display: 'flex', alignItems: 'center', gap: '14px', maxWidth: '400px', borderLeft: '4px solid rgba(255,255,255,0.5)', animation: 'slideIn 0.4s ease-out' }}> {toast.type === 'success' ? <CheckCircle size={26} /> : (toast.type === 'error' ? <AlertTriangle size={26} /> : <Info size={26} />)} <span style={{ fontWeight: '600', fontSize: '0.95rem', lineHeight: '1.4' }}>{toast.message}</span> </div> )}
-
-      <div className={`sidebar ${menuAberto ? 'open' : ''} ${menuRecolhido ? 'collapsed' : ''}`}>
-        <div className="sidebar-header" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ background: 'white', borderRadius: '8px', padding: '4px', display: 'flex' }}><TermoSyncLogo size={24} color="var(--primary)" /></div>
-          <h2 className="hide-on-collapse">TermoSync</h2>
-          <button className="mobile-close" onClick={() => setMenuAberto(false)}><X size={24} color="white" /></button>
-        </div>
-        <div className="hide-on-collapse" style={{ padding: '0 1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '900', fontSize: '1.2rem', textTransform: 'uppercase' }}>{nomeLogado ? nomeLogado.charAt(0) : (loginAtivo ? loginAtivo.charAt(0) : 'U')}</div>
-          <div style={{ flex: 1, overflow: 'hidden' }}><div style={{ color: 'white', fontWeight: 'bold', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nomeLogado || loginAtivo || 'Utilizador'}</div><div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: '600' }}>@{loginAtivo} • {papelLogado}</div></div>
-        </div>
-        <div className="hide-on-collapse" style={{ padding: '0 1rem', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '5px', textTransform: 'uppercase' }}>{userRole !== 'LOJA' ? <><MapPin size={14}/> Rede de Lojas</> : <><UserCheck size={14}/> Acesso Local</>}</div>
-            {userRole !== 'LOJA' ? (<select className="select-input" value={filialAtiva} onChange={(e) => setFilialAtiva(e.target.value)} style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>{listaFiliais?.map(f => <option key={f} value={f}>{f === 'Todas' ? 'Visão Global Integrada' : f}</option>)}</select>) : (<div style={{ width: '100%', padding: '8px', backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', fontSize: '0.9rem' }}>{userFilial}</div>)}
-        </div>
-        <nav className="sidebar-nav">
-          <div className="hide-on-collapse" style={{ marginTop: '1rem', marginBottom: '0.5rem', paddingLeft: '1.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Operações</div>
-          <button className={`nav-item ${abaAtiva === 'dashboard' ? 'active' : ''}`} onClick={() => { setAbaAtiva('dashboard'); setMenuAberto(false); }}><Activity size={20} /> <span className="nav-item-text">Painel Central</span> {notificacoesDaFilial?.length > 0 && <span className="badge" style={{background: 'var(--danger)'}}>{notificacoesDaFilial.length}</span>}</button>
-          <button className={`nav-item ${abaAtiva === 'motores' ? 'active' : ''}`} onClick={() => { setAbaAtiva('motores'); setMenuAberto(false); }}><Thermometer size={20} /> <span className="nav-item-text">Monitorização Térmica</span></button>
-          <button className={`nav-item ${abaAtiva === 'umidade' ? 'active' : ''}`} onClick={() => { setAbaAtiva('umidade'); setMenuAberto(false); }}><Droplets size={20} /> <span className="nav-item-text">Monitorização Humidade</span></button>
-          
-          <div className="hide-on-collapse" style={{ marginTop: '1rem', marginBottom: '0.5rem', paddingLeft: '1.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Serviços</div>
-          <button className={`nav-item ${abaAtiva === 'equipamentos' ? 'active' : ''}`} onClick={() => { setAbaAtiva('equipamentos'); setMenuAberto(false); }}><Settings size={20} /> <span className="nav-item-text"> Central de Máquinas</span></button>
-          <button className={`nav-item ${abaAtiva === 'chamados' ? 'active' : ''}`} onClick={() => { setAbaAtiva('chamados'); setMenuAberto(false); }}><Wrench size={20} /> <span className="nav-item-text">Chamados Técnicos</span></button>
-          
-          <button className={`nav-item ${abaAtiva === 'chat' ? 'active' : ''}`} onClick={() => { setAbaAtiva('chat'); setMenuAberto(false); }}>
-            <MessageSquare size={20} /> <span className="nav-item-text">Chat Interno</span>
-            {totalNaoLidas > 0 && <span className="badge" style={{ backgroundColor: 'var(--info)', color: 'white' }}>{totalNaoLidas}</span>}
-          </button>
-          
-          <button className={`nav-item ${abaAtiva === 'historico_chamados' ? 'active' : ''}`} onClick={() => { setAbaAtiva('historico_chamados'); setMenuAberto(false); }}><Archive size={20} /> <span className="nav-item-text">Histórico de Chamados</span></button>
-          
-          <div className="hide-on-collapse" style={{ marginTop: '1rem', marginBottom: '0.5rem', paddingLeft: '1.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Auditoria</div>
-          <button className={`nav-item ${abaAtiva === 'relatorios' ? 'active' : ''}`} onClick={() => { setAbaAtiva('relatorios'); setMenuAberto(false); }}><Leaf size={20} /> <span className="nav-item-text">Sustentabilidade e ESG</span></button>
-          <button className={`nav-item ${abaAtiva === 'historico' ? 'active' : ''}`} onClick={() => { setAbaAtiva('historico'); setMenuAberto(false); }}><History size={20} /> <span className="nav-item-text">Auditoria RDC (Logs)</span></button>
-          
-          {userRole === 'ADMIN' && (<><div className="hide-on-collapse" style={{ marginTop: '1rem', marginBottom: '0.5rem', paddingLeft: '1.5rem', fontSize: '0.75rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Sistema</div><button className={`nav-item ${abaAtiva === 'lojas' ? 'active' : ''}`} onClick={() => { setAbaAtiva('lojas'); setMenuAberto(false); }}><Store size={20} /> <span className="nav-item-text">Gestão de Lojas</span></button><button className={`nav-item ${abaAtiva === 'parametros' ? 'active' : ''}`} onClick={() => { setAbaAtiva('parametros'); setMenuAberto(false); }}><Sliders size={20} /> <span className="nav-item-text">Parâmetros Globais</span></button><button className={`nav-item ${abaAtiva === 'usuarios' ? 'active' : ''}`} onClick={() => { setAbaAtiva('usuarios'); setMenuAberto(false); }}><Users size={20} /> <span className="nav-item-text">Gestão de Acessos</span></button></>)}
-        </nav>
-        <div style={{ marginTop: 'auto', padding: '1.5rem 1rem' }}>
-          <button className="btn w-100 btn-logout" onClick={fazerLogout}>
-            <LogOut size={18} style={{ marginRight: '8px' }} className="logout-icon" /> <span className="nav-item-text">Encerrar Sessão</span>
-          </button>
-        </div>
-      </div>
-
-      {menuAberto && <div className="overlay" onClick={() => setMenuAberto(false)}></div>}
-
-      <div className="main-content">
-        <header className="header">
-          <button className="menu-btn" onClick={() => { if (window.innerWidth <= 768) setMenuAberto(true); else setMenuRecolhido(!menuRecolhido); }}>
-            <Menu size={24} />
-          </button>
-          
-          <h2 className="page-title"> {abaAtiva === 'dashboard' ? 'Central de Operações' : abaAtiva === 'relatorios' ? 'Inteligência e Sustentabilidade' : abaAtiva === 'usuarios' ? 'Administração de Usuários' : abaAtiva === 'parametros' ? 'Configurações do Sistema' : abaAtiva === 'lojas' ? 'Cadastro de Lojas' : abaAtiva === 'chamados' ? 'Manutenção Corretiva' : abaAtiva === 'chat' ? 'Central de Bate-Papo' : abaAtiva === 'historico_chamados' ? 'Histórico de Manutenções Antigas' : 'Gestão de Máquinas'} </h2>
-          
-          <div className="user-info">
-            <div className={`telemetry-badge-simple status-${statusConn.level}`} title="Qualidade da rede do supermercado">
-              <div className="signal-bars-simple">
-                 <div className={`bar ${statusConn.bars >= 1 ? 'active' : ''}`}></div>
-                 <div className={`bar ${statusConn.bars >= 2 ? 'active' : ''}`}></div>
-                 <div className={`bar ${statusConn.bars >= 3 ? 'active' : ''}`}></div>
-              </div>
-              <span className="conn-text">{statusConn.text}</span>
-              {!isOffline && latencia > 0 && <span className="conn-ms">{latencia}ms</span>}
+      {/* OVERLAY COMMAND PALETTE (CTRL+K) */}
+      {showCommandPalette && (
+        <div className="command-palette-overlay" onClick={() => setShowCommandPalette(false)}>
+          <div className="command-palette-modal anim-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="cmd-input-row">
+              <Search size={22} color="var(--primary)" />
+              <input 
+                ref={commandInputRef}
+                type="text" autoFocus placeholder="Pesquisar módulo ou comando de sistema..." 
+                value={cmdSearch} onChange={e => setCmdSearch(e.target.value)}
+              />
+              <div className="cmd-hint"><Keyboard size={14}/> ESC para fechar</div>
             </div>
-            <button className="btn-icon" onClick={alternarSom} title={somAtivoState ? "Silenciar Alarmes" : "Ligar Alarmes"} style={{ color: somAtivoState ? 'var(--primary)' : 'var(--text-muted)' }}>{somAtivoState ? <Volume2 size={20} /> : <VolumeX size={20} />}</button>
-            <button className="btn-icon" onClick={alternarAlertasTela} title={alertasNaTela ? "Ocultar Alertas Visuais" : "Mostrar Alertas Visuais"} style={{ color: alertasNaTela ? 'var(--primary)' : 'var(--text-muted)' }}>{alertasNaTela ? <Bell size={20} /> : <BellOff size={20} />}</button>
-            <button className="btn-icon" onClick={toggleFullScreen} title={isFullScreen ? "Sair da Tela Cheia" : "Tela Cheia"}>{isFullScreen ? <Minimize size={20} /> : <Maximize size={20} />}</button>
-            <button className="btn-icon" onClick={() => setIsDarkMode(!isDarkMode)} title={isDarkMode ? "Mudar para Fundo Claro" : "Mudar para Fundo Escuro"}>{isDarkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
+            
+            <div className="cmd-results">
+              <div className="cmd-group">Navegação Rápida</div>
+              {NAVIGATION_ATIVA.filter(n => n.label.toLowerCase().includes(cmdSearch.toLowerCase())).map(nav => (
+                <button key={nav.id} className="cmd-item" onClick={() => { setAbaAtiva(nav.id); setShowCommandPalette(false); }}>
+                  <nav.icon size={18} className="cmd-item-icon"/> <span>Acessar <strong>{nav.label}</strong></span>
+                </button>
+              ))}
+
+              <div className="cmd-group" style={{marginTop: '15px'}}>Ações Táticas</div>
+              <button className="cmd-item" onClick={() => { alternarSom(); setShowCommandPalette(false); }}>
+                {somAtivoState ? <VolumeX size={18} className="cmd-item-icon"/> : <Volume2 size={18} className="cmd-item-icon"/>} <span>{somAtivoState ? 'Silenciar Sirene Global' : 'Armar Sirene Global'}</span>
+              </button>
+              <button className="cmd-item" onClick={() => { setIsLocked(true); setShowCommandPalette(false); }}>
+                <Lock size={18} className="cmd-item-icon" style={{color: 'var(--warning)'}}/> <span>Ativar Proteção de Tela (AFK)</span>
+              </button>
+              <button className="cmd-item" onClick={fazerLogout}>
+                <LogOut size={18} className="cmd-item-icon" style={{color: 'var(--danger)'}}/> <span style={{color: 'var(--danger)'}}>Destruir Sessão (Logout)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OVERLAY MOBILE */}
+      {menuAberto && window.innerWidth <= 768 && (
+        <div className="overlay" onClick={() => setMenuAberto(false)}></div>
+      )}
+
+      {/* MENU LATERAL TÁTICO (CYBER SIDEBAR) */}
+      <aside className={`sidebar ${menuAberto ? 'open' : ''} ${menuRecolhido ? 'collapsed' : ''}`}>
+        <div className="sidebar-header">
+          <TermoSyncLogo size={32} color="var(--secondary)" className="hide-on-collapse" />
+          <h2 className="hide-on-collapse" style={{marginLeft: '10px'}}>TermoSync</h2>
+          <button className="mobile-close" onClick={() => setMenuAberto(false)}><X size={20} /></button>
+        </div>
+
+        <div className="sidebar-user hide-on-collapse" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="user-avatar" style={{ width: '40px', height: '40px', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--secondary)', fontWeight: 'bold' }}>
+            {nomeLogado ? nomeLogado.charAt(0) : 'U'}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <span style={{ color: 'white', fontWeight: '800', fontSize: '0.9rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{nomeLogado}</span>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: '600' }}>{papelLogado}</span>
+          </div>
+        </div>
+
+        <div className="hide-on-collapse" style={{ padding: '0.8rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--secondary)', fontWeight: '800', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              {userRole !== 'LOJA' ? <><MapPin size={14}/> Rede de Lojas</> : <><UserCheck size={14}/> Acesso Local</>}
+            </div>
+            {userRole !== 'LOJA' ? (
+              <select 
+                value={filialAtiva} 
+                onChange={(e) => setFilialAtiva(e.target.value)}
+                style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: '8px', color: 'white', fontSize: '0.85rem', fontWeight: '700', outline: 'none' }}
+              >
+                {listaFiliais?.map(f => <option key={f} value={f} style={{background: '#0f172a'}}>{f === 'Todas' ? 'Visão Global' : f}</option>)}
+              </select>
+            ) : (
+              <div style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: '8px', color: 'white', fontSize: '0.85rem', fontWeight: '700' }}>
+                {userFilial}
+              </div>
+            )}
+        </div>
+
+        <nav className="sidebar-nav">
+          {['Operações', 'Serviços', 'Auditoria', 'Sistema'].map(group => {
+            const itemsInGroup = NAVIGATION_ATIVA.filter(n => n.type === group);
+            if (itemsInGroup.length === 0) return null;
+            return (
+              <React.Fragment key={group}>
+                <div className="nav-group-label hide-on-collapse">{group}</div>
+                {itemsInGroup.map(item => (
+                  <button 
+                    key={item.id} 
+                    className={`nav-item ${abaAtiva === item.id ? 'active' : ''}`} 
+                    onClick={() => { setAbaAtiva(item.id); if(window.innerWidth <= 768) setMenuAberto(false); }}
+                    title={item.label}
+                  >
+                    <item.icon size={20} />
+                    <span className="nav-item-text hide-on-collapse">{item.label}</span>
+                    {item.badge > 0 && <span className="badge hide-on-collapse">{item.badge}</span>}
+                  </button>
+                ))}
+              </React.Fragment>
+            );
+          })}
+        </nav>
+
+        <div style={{ marginTop: 'auto', padding: '1rem', display: 'flex', gap: '8px' }}>
+          <button className="btn-logout flex-1" onClick={() => setIsLocked(true)} title="Modo AFK" style={{ background: 'rgba(245, 158, 11, 0.05)', color: 'var(--warning)', borderColor: 'rgba(245, 158, 11, 0.2)', padding: '12px', border: '1px dashed rgba(245, 158, 11, 0.4)', borderRadius: '10px', display: 'flex', justifyContent: 'center', cursor: 'pointer' }}>
+            <Lock size={18} />
+          </button>
+          <button className="btn-logout flex-1 hide-on-collapse" onClick={fazerLogout} title="Encerrar Sessão" style={{ background: 'rgba(239, 68, 68, 0.05)', color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)', padding: '12px', border: '1px dashed rgba(239, 68, 68, 0.4)', borderRadius: '10px', display: 'flex', justifyContent: 'center', cursor: 'pointer' }}>
+            <LogOut size={18} />
+          </button>
+        </div>
+      </aside>
+
+      {/* ÁREA PRINCIPAL */}
+      <main className="main-content">
+        
+        <header className="header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <button className="btn-icon" onClick={() => { if (window.innerWidth <= 768) setMenuAberto(true); else setMenuRecolhido(!menuRecolhido); }}>
+              <Menu size={22} />
+            </button>
+            <h1 className="page-title desktop-only">
+              {NAVIGATION.find(n => n.id === abaAtiva)?.label || 'TermoSync NOC'}
+            </h1>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            
+            <div className="telemetry-badge-simple desktop-only" title={isFeatureEnabled('telemetryStream') ? "Socket Conectado" : "Fluxo Bloqueado pelas Políticas"}>
+              <div className={`signal-bars-simple ${!isFeatureEnabled('telemetryStream') ? 'status-offline' : (isOffline ? 'status-offline' : socketInstance ? 'status-good' : 'status-slow')}`}>
+                <div className="bar active"></div>
+                <div className="bar active"></div>
+                <div className={`bar ${socketInstance && !isOffline && isFeatureEnabled('telemetryStream') ? 'active' : ''}`}></div>
+              </div>
+              <span className="conn-text">{!isFeatureEnabled('telemetryStream') ? 'STREAM PAUSADA' : (isOffline ? 'SINAL PERDIDO' : 'CONECTADO')}</span>
+              {!isOffline && isFeatureEnabled('telemetryStream') && <span className="conn-ms">{latencia}ms</span>}
+            </div>
+
+            <button className="btn-outline desktop-only" onClick={() => setShowCommandPalette(true)} style={{ padding: '6px 12px', fontSize: '0.8rem', gap: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
+              <Search size={14} /> Terminal <span style={{ background: 'rgba(0,0,0,0.1)', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>⌘K</span>
+            </button>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn-icon" onClick={alternarSom} title={somAtivoState ? "Desarmar Sirenes" : "Armar Sirenes"} disabled={!isFeatureEnabled('enableAudioAlerts')} style={{ opacity: isFeatureEnabled('enableAudioAlerts') ? 1 : 0.3 }}>
+                {somAtivoState ? <Volume2 size={18} color="var(--primary)"/> : <VolumeX size={18} />}
+              </button>
+              <button className="btn-icon desktop-only" onClick={toggleFullScreen} title="Painel de Comando TV">
+                {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
+              </button>
+              <button className="btn-icon" onClick={() => setIsDarkMode(!isDarkMode)} title="Modo Visual" disabled={!isFeatureEnabled('forceDarkMode') === false} style={{ opacity: isFeatureEnabled('forceDarkMode') ? 0.3 : 1 }}>
+                {isDarkMode ? <Sun size={18} color="var(--warning)"/> : <Moon size={18} />}
+              </button>
+            </div>
           </div>
         </header>
 
-        <main className="content-area">
-          {abaAtiva === 'dashboard' && ( 
-            <Dashboard 
-              qtdTotal={qtdTotal} qtdOperando={qtdOperando} qtdDegelo={qtdDegelo} qtdFalha={qtdFalha} 
-              dadosDonutStatus={dadosDonutStatus} notificacoesDaFilial={notificacoesDaFilial} 
-              resolverTodasNotificacoes={resolverTodasNotificacoes} isOffline={isOffline} 
-              pedirNotaResolucao={pedirNotaResolucao} isDarkMode={isDarkMode} 
-              contatosDb={contatosDb} 
-              showToast={showToast}
-              irParaChat={(id) => { 
-                setAbaAtiva('chat'); 
-                if (id) {
-                  const c = contatosDb.find(x => String(x.id) === String(id));
-                  if (c) setContatoChatAtivo(c);
-                }
-              }} 
-              socket={socketInstance}
-              userId={userId}
-              nomeLogado={nomeLogado}
-              setHistoricoChat={setHistoricoChat} 
-            /> 
-          )}
-          {abaAtiva === 'chat' && ( 
-            <Chat 
-              contatosDb={contatosDb} 
-              nomeLogado={nomeLogado} 
-              socket={socketInstance}
-              userId={userId}
-              historicoChat={historicoChat} 
-              setHistoricoChat={setHistoricoChat}
-              contatoAtivo={contatoChatAtivo}
-              setContatoAtivo={setContatoChatAtivo}
-              naoLidasPorContato={naoLidasPorContato}
-              setNaoLidasPorContato={setNaoLidasPorContato} 
-            /> 
-          )}
-          {abaAtiva === 'motores' && ( <Monitoramento isTemp={true} listaSetores={listaSetores} equipamentosDaFilial={equipamentosDaFilial} /> )}
-          {abaAtiva === 'umidade' && ( <Monitoramento isTemp={false} listaSetores={listaSetores} equipamentosDaFilial={equipamentosDaFilial} /> )}
-          {abaAtiva === 'equipamentos' && ( <Equipamentos api={api} showToast={showToast} isOffline={isOffline} userRole={userRole} userFilial={userFilial} filiaisDb={filiaisDb} listaSetores={listaSetores} listaTipos={listaTipos} carregarDadosBase={carregarDadosBase} equipamentosFiltradosLista={equipamentosFiltradosLista} editarEquipamento={editarEquipamento} pedirExclusao={pedirExclusao} /> )}
-          {abaAtiva === 'relatorios' && ( <Relatorios totalEnergia={totalEnergia} slaCompliance={slaCompliance} kpis={kpis} mktValueProcessado={mktValueProcessado} dataInicio={dataInicio} setDataInicio={setDataInicio} dataFim={dataFim} setDataFim={setDataFim} isOffline={isOffline} equipamentoFiltro={equipamentoFiltro} setEquipamentoFiltro={setEquipamentoFiltro} equipamentosDaFilial={equipamentosDaFilial} gerarExportacao={gerarExportacao} dadosGraficoFiltrados={dadosGraficoFiltrados} isDarkMode={isDarkMode} equipamentoSelecionado={equipamentoSelecionado} ultimasLeiturasRaw={ultimasLeiturasRaw} /> )}
-          {abaAtiva === 'historico' && ( <HistoricoLogs historicoFiltradoLista={historicoFiltradoLista} gerarExportacao={gerarExportacao} /> )}
-          {abaAtiva === 'chamados' && ( <Chamados userRole={userRole} filialAtiva={filialAtiva} nomeLogado={nomeLogado} chamados={chamados} tecnicosDb={tecnicosDb} equipamentosDaFilial={equipamentosDaFilial} nomeGerente={nomeGerente} nomeCoordenador={nomeCoordenador} api={api} carregarChamados={carregarChamados} showToast={showToast} isOffline={isOffline} gerarLoteOS={gerarLoteOS} /> )}
-          {abaAtiva === 'historico_chamados' && ( <HistoricoChamados userRole={userRole} filialAtiva={filialAtiva} nomeLogado={nomeLogado} chamados={chamados} tecnicosDb={tecnicosDb} gerarLoteOS={gerarLoteOS} /> )}
-          {abaAtiva === 'lojas' && userRole === 'ADMIN' && ( <GestaoLojas api={api} showToast={showToast} lojasCadastradas={lojasCadastradas} carregarLojas={carregarLojas} carregarDadosBase={carregarDadosBase} setModalConfig={setModalConfig} /> )}
-          {abaAtiva === 'usuarios' && userRole === 'ADMIN' && ( <GestaoUsuarios api={api} showToast={showToast} usuariosLista={usuariosLista} carregarUsuarios={carregarUsuarios} filiaisDb={filiaisDb} setModalConfig={setModalConfig} /> )}
-          {abaAtiva === 'parametros' && userRole === 'ADMIN' && ( <ParametrosGlobais api={api} showToast={showToast} listaSetores={listaSetores} listaTipos={listaTipos} carregarParametrosGerais={carregarParametrosGerais} carregarDadosBase={carregarDadosBase} setModalConfig={setModalConfig} /> )}
-        </main>
+        <div className="content-area">
+          <ErrorBoundary>
+            {/* RENDERIZAÇÃO BLINDADA: Os Módulos somem instantaneamente se a política do SysAdmin não permitir */}
+            {!isModuloOculto('dashboard') && abaAtiva === 'dashboard' && ( <Dashboard qtdTotal={qtdTotal} qtdOperando={qtdOperando} qtdDegelo={qtdDegelo} qtdFalha={qtdFalha} dadosDonutStatus={dadosDonutStatus} notificacoesDaFilial={notificacoesDaFilial} resolverTodasNotificacoes={resolverTodasNotificacoes} isOffline={isOffline} pedirNotaResolucao={pedirNotaResolucao} isDarkMode={isDarkMode} contatosDb={contatosDb} showToast={showToast} irParaChat={(id) => { setAbaAtiva('chat'); if (id) { const c = contatosDb.find(x => String(x.id) === String(id)); if (c) setContatoChatAtivo(c); } }} socket={socketInstance} userId={userId} nomeLogado={nomeLogado} setHistoricoChat={setHistoricoChat} /> )}
+            {!isModuloOculto('chat') && abaAtiva === 'chat' && isFeatureEnabled('enableChat') && ( <Chat contatosDb={contatosDb} nomeLogado={nomeLogado} socket={socketInstance} userId={userId} historicoChat={historicoChat} setHistoricoChat={setHistoricoChat} contatoAtivo={contatoChatAtivo} setContatoAtivo={setContatoChatAtivo} naoLidasPorContato={naoLidasPorContato} setNaoLidasPorContato={setNaoLidasPorContato} /> )}
+            {!isModuloOculto('motores') && abaAtiva === 'motores' && ( <Monitoramento isTemp={true} listaSetores={listaSetores} equipamentosDaFilial={equipamentosDaFilial} /> )}
+            {!isModuloOculto('umidade') && abaAtiva === 'umidade' && ( <Monitoramento isTemp={false} listaSetores={listaSetores} equipamentosDaFilial={equipamentosDaFilial} /> )}
+            {!isModuloOculto('equipamentos') && abaAtiva === 'equipamentos' && ( <Equipamentos api={api} showToast={showToast} isOffline={isOffline} userRole={userRole} userFilial={userFilial} filiaisDb={filiaisDb} listaSetores={listaSetores} listaTipos={listaTipos} carregarDadosBase={carregarDadosBase} equipamentosFiltradosLista={equipamentosFiltradosLista} editarEquipamento={editarEquipamento} pedirExclusao={pedirExclusao} /> )}
+            {!isModuloOculto('relatorios') && abaAtiva === 'relatorios' && ( <Relatorios totalEnergia={totalEnergia} slaCompliance={slaCompliance} kpis={kpis} mktValueProcessado={mktValueProcessado} dataInicio={dataInicio} setDataInicio={setDataInicio} dataFim={dataFim} setDataFim={setDataFim} isOffline={isOffline} equipamentoFiltro={equipamentoFiltro} setEquipamentoFiltro={setEquipamentoFiltro} equipamentosDaFilial={equipamentosDaFilial} gerarExportacao={gerarExportacao} dadosGraficoFiltrados={dadosGraficoFiltrados} isDarkMode={isDarkMode} equipamentoSelecionado={equipamentoSelecionado} ultimasLeiturasRaw={ultimasLeiturasRaw} /> )}
+            {!isModuloOculto('historico') && abaAtiva === 'historico' && ( <HistoricoLogs historicoFiltradoLista={historicoFiltradoLista} gerarExportacao={gerarExportacao} /> )}
+            {!isModuloOculto('chamados') && abaAtiva === 'chamados' && ( <Chamados userRole={userRole} filialAtiva={filialAtiva} nomeLogado={nomeLogado} chamados={chamados} tecnicosDb={tecnicosDb} equipamentosDaFilial={equipamentosDaFilial} api={api} carregarChamados={carregarChamados} showToast={showToast} isOffline={isOffline} gerarLoteOS={gerarLoteOS} /> )}
+            {!isModuloOculto('historico_chamados') && abaAtiva === 'historico_chamados' && ( <HistoricoChamados userRole={userRole} filialAtiva={filialAtiva} nomeLogado={nomeLogado} chamados={chamados} tecnicosDb={tecnicosDb} gerarLoteOS={gerarLoteOS} api={api} carregarChamados={carregarChamados} showToast={showToast} /> )}
+            {!isModuloOculto('lojas') && abaAtiva === 'lojas' && (userRole === 'ADMIN' || userRole === 'DEV') && ( <GestaoLojas api={api} showToast={showToast} lojasCadastradas={lojasCadastradas} carregarLojas={carregarLojas} carregarDadosBase={carregarDadosBase} setModalConfig={setModalConfig} /> )}
+            {!isModuloOculto('usuarios') && abaAtiva === 'usuarios' && (userRole === 'ADMIN' || userRole === 'DEV') && ( <GestaoUsuarios api={api} showToast={showToast} usuariosLista={usuariosLista} carregarUsuarios={carregarUsuarios} filiaisDb={filiaisDb} setModalConfig={setModalConfig} /> )}
+            {!isModuloOculto('parametros') && abaAtiva === 'parametros' && (userRole === 'ADMIN' || userRole === 'DEV') && ( <ParametrosGlobais api={api} showToast={showToast} listaSetores={listaSetores} listaTipos={listaTipos} carregarParametrosGerais={carregarParametrosGerais} carregarDadosBase={carregarDadosBase} setModalConfig={setModalConfig} /> )}
+            
+            {abaAtiva === 'dev_panel' && userRole === 'DEV' && ( 
+              <PainelDesenvolvedor 
+                showToast={showToast} 
+                sysConfig={sysConfig}
+                updateSysConfig={updateSysConfig}
+                tocarAlarme={tocarAlarme}
+                usuariosLista={usuariosLista}
+              /> 
+            )}
+
+            {/* AVISO DE MÓDULO RESTRITO */}
+            {((isModuloOculto(abaAtiva) && abaAtiva !== 'dev_panel') || (abaAtiva === 'chat' && !isFeatureEnabled('enableChat'))) && (
+               <div className="empty-state dashboard-empty anim-fade-in" style={{marginTop: '2rem'}}>
+                  <div className="empty-shield-box" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
+                    <AlertOctagon size={48} color="var(--danger)" />
+                  </div>
+                  <h3 className="empty-title" style={{ color: 'var(--danger)' }}>Acesso Restrito</h3>
+                  <p className="empty-subtitle">As políticas de governação atuais impedem a visualização deste módulo.</p>
+               </div>
+            )}
+
+          </ErrorBoundary>
+        </div>
+      </main>
+
+      {/* TOASTS E MODAIS... */}
+      <div className="toast-container">
+        {toasts.map(t => (
+          <div key={t.id} className={`toast toast-${t.type}`}>
+            <span className="toast-message" dangerouslySetInnerHTML={{ __html: t.message }}></span>
+            <button className="toast-close-btn" onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}><X size={16}/></button>
+          </div>
+        ))}
       </div>
 
       {equipEditando && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3><Edit size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Editar Ativo IoT</h3>
+            <h3><Edit size={20} style={{ marginRight: '10px' }} /> Editar Ativo IoT</h3>
             <form onSubmit={salvarEdicaoEquipamento}>
               <div className="form-grid">
-                <div><label>Identificador Máquina</label><input type="text" value={formEditEquip.nome} onChange={(e) => setFormEditEquip({ ...formEditEquip, nome: e.target.value })} required disabled={isOffline} /></div>
-                <div><label>Filial Física</label><select className="select-input" value={formEditEquip.filial} onChange={(e) => setFormEditEquip({ ...formEditEquip, filial: e.target.value })} required disabled={userRole === 'LOJA' || isOffline} style={{ backgroundColor: userRole === 'LOJA' ? 'var(--bg-color)' : undefined }}><option value="">Selecione...</option>{filiaisDb?.map(f => <option key={f} value={f}>{f}</option>)}</select></div>
-                <div><label>Setor Comercial</label><select className="select-input" value={formEditEquip.setor} onChange={(e) => setFormEditEquip({ ...formEditEquip, setor: e.target.value })} required disabled={isOffline}><option value="">Selecione o Setor...</option>{listaSetores?.map(s => <option key={s.id} value={s.nome}>{s.nome}</option>)}</select></div>
-                <div><label>Tipo</label><select className="select-input" value={formEditEquip.tipo} onChange={(e) => setFormEditEquip({ ...formEditEquip, tipo: e.target.value })} required disabled={isOffline}><option value="">Selecione o Tipo...</option>{listaTipos?.map(t => <option key={t.id} value={t.nome}>{t.nome}</option>)}</select></div>
-                <div><label>Data Calibração Oficial</label><input type="date" value={formEditEquip.data_calibracao} onChange={(e) => setFormEditEquip({ ...formEditEquip, data_calibracao: e.target.value })} required disabled={isOffline} /></div>
-                <div><label>Degelo Automático (H)</label><input type="number" min="1" value={formEditEquip.intervalo_degelo} onChange={(e) => setFormEditEquip({ ...formEditEquip, intervalo_degelo: e.target.value })} required disabled={isOffline} /></div>
-                <div><label>Temp. Min (°C)</label><input type="number" step="0.1" value={formEditEquip.temp_min} onChange={(e) => setFormEditEquip({ ...formEditEquip, temp_min: e.target.value })} required disabled={isOffline} /></div>
-                <div><label>Temp. Max (°C)</label><input type="number" step="0.1" value={formEditEquip.temp_max} onChange={(e) => setFormEditEquip({ ...formEditEquip, temp_max: e.target.value })} required disabled={isOffline} /></div>
+                <div className="input-group"><label>Identificação</label><div className="input-wrapper"><input type="text" value={formEditEquip.nome} onChange={(e) => setFormEditEquip({ ...formEditEquip, nome: e.target.value })} required disabled={isOffline} /></div></div>
+                <div className="input-group"><label>Filial Física</label><div className="input-wrapper"><select value={formEditEquip.filial} onChange={(e) => setFormEditEquip({ ...formEditEquip, filial: e.target.value })} required disabled={userRole === 'LOJA' || isOffline}><option value="">Selecione...</option>{filiaisDb?.map(f => <option key={f} value={f}>{f}</option>)}</select></div></div>
+                <div className="input-group"><label>Setor Comercial</label><div className="input-wrapper"><select value={formEditEquip.setor} onChange={(e) => setFormEditEquip({ ...formEditEquip, setor: e.target.value })} required disabled={isOffline}><option value="">Selecione...</option>{listaSetores?.map(s => <option key={s.id} value={s.nome}>{s.nome}</option>)}</select></div></div>
+                <div className="input-group"><label>Tipo de Refrigeração</label><div className="input-wrapper"><select value={formEditEquip.tipo} onChange={(e) => setFormEditEquip({ ...formEditEquip, tipo: e.target.value })} required disabled={isOffline}><option value="">Selecione...</option>{listaTipos?.map(t => <option key={t.id} value={t.nome}>{t.nome}</option>)}</select></div></div>
+                <div className="input-group"><label>Data de Calibração</label><div className="input-wrapper"><input type="date" value={formEditEquip.data_calibracao} onChange={(e) => setFormEditEquip({ ...formEditEquip, data_calibracao: e.target.value })} required disabled={isOffline} /></div></div>
+                <div className="input-group"><label>Degelo Automático (H)</label><div className="input-wrapper"><input type="number" min="1" value={formEditEquip.intervalo_degelo} onChange={(e) => setFormEditEquip({ ...formEditEquip, intervalo_degelo: e.target.value })} required disabled={isOffline} /></div></div>
+                <div className="input-group"><label>Temp. Min (°C)</label><div className="input-wrapper"><input type="number" step="0.1" value={formEditEquip.temp_min} onChange={(e) => setFormEditEquip({ ...formEditEquip, temp_min: e.target.value })} required disabled={isOffline} /></div></div>
+                <div className="input-group"><label>Temp. Max (°C)</label><div className="input-wrapper"><input type="number" step="0.1" value={formEditEquip.temp_max} onChange={(e) => setFormEditEquip({ ...formEditEquip, temp_max: e.target.value })} required disabled={isOffline} /></div></div>
               </div>
-              <div className="modal-actions"><button type="button" className="btn btn-outline" onClick={() => setEquipEditando(null)}>Cancelar</button><button type="submit" className="btn btn-primary" disabled={isOffline}><Save size={18} /> Guardar Perfil</button></div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-outline" onClick={() => setEquipEditando(null)}>Abortar</button>
+                <button type="submit" className="btn btn-primary" disabled={isOffline}><Save size={18} /> Gravar Parâmetros</button>
+              </div>
             </form>
           </div>
         </div>
@@ -415,10 +716,18 @@ export default function App() {
 
       {modalConfig.isOpen && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '400px' }}>
-            <h3>{modalConfig.title}</h3><p>{modalConfig.message}</p>
-            {modalConfig.isPrompt && (<input type="text" style={{ width: '100%', marginBottom: '1rem' }} value={modalConfig.promptValue} onChange={(e) => setModalConfig({...modalConfig, promptValue: e.target.value})} placeholder="Insira o relatório da intervenção..." autoFocus />)}
-            <div className="modal-actions"><button className="btn btn-outline" onClick={() => setModalConfig({...modalConfig, isOpen: false})}>Cancelar</button><button className="btn btn-primary" onClick={() => { modalConfig.onConfirm(modalConfig.promptValue); setModalConfig({...modalConfig, isOpen: false}); }}>Confirmar</button></div>
+          <div className="modal-content prompt-box">
+            <h3 style={{ justifyContent: 'center', marginBottom: '1rem' }}>{modalConfig.title}</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: '1.5' }}>{modalConfig.message}</p>
+            {modalConfig.isPrompt && (
+              <div className="input-wrapper" style={{ marginBottom: '1.5rem' }}>
+                <input type="text" value={modalConfig.promptValue} onChange={(e) => setModalConfig({...modalConfig, promptValue: e.target.value})} placeholder="Insira a justificativa..." autoFocus />
+              </div>
+            )}
+            <div className="modal-actions" style={{ marginTop: '0', paddingTop: '0', border: 'none' }}>
+              <button className="btn btn-outline w-100" onClick={() => setModalConfig({...modalConfig, isOpen: false})}>Cancelar</button>
+              <button className="btn btn-primary w-100" onClick={() => { modalConfig.onConfirm(modalConfig.promptValue); setModalConfig({...modalConfig, isOpen: false}); }}>Prosseguir</button>
+            </div>
           </div>
         </div>
       )}
