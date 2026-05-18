@@ -1,39 +1,70 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   UserPlus, Wrench, Settings, Users, Edit, X, Save, 
   ShieldAlert, Store, UserCircle, KeyRound, MapPin, 
-  Search, Shield, ShieldCheck, Lock
+  Search, Shield, ShieldCheck, Lock, Briefcase
 } from 'lucide-react';
 import './GestaoUsuarios.css';
 
-export default function GestaoUsuarios({ api, showToast, usuariosLista, carregarUsuarios, filiaisDb, setModalConfig }) {
+export default function GestaoUsuarios({ api, showToast, setModalConfig }) {
+
+  const roleLogada = sessionStorage.getItem('userRole') || 'LOJA';
 
   const formInicialUsuario = {
-    id: '',
-    usuario: '',
-    senha: '',
-    role: 'LOJA',
-    filial: '',
-    tipo_acesso: 'GERENTE',
-    nome: '' 
+    id: '', usuario: '', senha: '', role: 'LOJA', filial: '', tipo_acesso: 'GERENTE', nome: '', empresa: ''
   };
 
+  const [usuariosLocais, setUsuariosLocais] = useState([]);
+  const [filiaisDb, setFiliaisDb] = useState([]);
+  const [empresasDb, setEmpresasDb] = useState([]);
+  
   const [formUsuario, setFormUsuario] = useState({ ...formInicialUsuario });
   const [modalUsuario, setModalUsuario] = useState(false);
   
   const [busca, setBusca] = useState('');
   const [filtroPrivilegio, setFiltroPrivilegio] = useState('TODOS');
 
+  // ==========================================
+  // BUSCA INDEPENDENTE DOS DADOS 
+  // ==========================================
+  const carregarUsuarios = useCallback(async () => {
+    try {
+      const res = await api.get('/usuarios');
+      setUsuariosLocais(Array.isArray(res.data) ? res.data : []);
+    } catch (e) {
+      showToast('Erro ao carregar a lista de identidades.', 'error');
+    }
+  }, [api, showToast]);
+
+  const carregarDependencias = useCallback(async () => {
+    try {
+      const resF = await api.get('/auxiliares/filiais');
+      setFiliaisDb(Array.isArray(resF.data) ? resF.data : []);
+      
+      // Se for DEV, carrega a lista de empresas para poder amarrar no momento de criar
+      if (roleLogada === 'DEV') {
+        const resE = await api.get('/empresas');
+        setEmpresasDb(Array.isArray(resE.data) ? resE.data : []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [api, roleLogada]);
+
+  useEffect(() => {
+    carregarUsuarios();
+    carregarDependencias();
+  }, [carregarUsuarios, carregarDependencias]);
+
+  // ==========================================
+  // AÇÕES DO MODAL
+  // ==========================================
   const abrirModalUsuario = (tipoAcesso) => {
     let roleTarget = 'LOJA';
     if (tipoAcesso === 'TECNICO') roleTarget = 'MANUTENCAO';
     if (tipoAcesso === 'OUTROS') roleTarget = 'ADMIN';
 
-    setFormUsuario({
-      ...formInicialUsuario,
-      role: roleTarget,
-      tipo_acesso: tipoAcesso
-    });
+    setFormUsuario({ ...formInicialUsuario, role: roleTarget, tipo_acesso: tipoAcesso });
     setModalUsuario(true);
   };
 
@@ -43,29 +74,28 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
       const payload = { 
         usuario: formUsuario.usuario,
         role: formUsuario.role,
-        nome: formUsuario.nome 
+        nome: formUsuario.nome,
+        empresa: formUsuario.empresa // Importante para o DEV
       };
       
-      // Restrição física
       if (formUsuario.role === 'LOJA') payload.filial = formUsuario.filial;
       else payload.filial = null;
 
       if (formUsuario.senha) payload.senha = formUsuario.senha;
 
-      // Gravação inteligente nas colunas do seu Banco de Dados
       if (formUsuario.role === 'MANUTENCAO') {
         payload.nome_tecnico = formUsuario.nome;
       } else if (formUsuario.role === 'LOJA') {
         if (formUsuario.tipo_acesso === 'GERENTE') payload.nome_gerente = formUsuario.nome;
         else if (formUsuario.tipo_acesso === 'COORDENADOR') payload.nome_coordenador = formUsuario.nome;
-        else payload.nome = formUsuario.nome; // Para outros cargos de loja
+        else payload.nome = formUsuario.nome; 
       }
 
       if (formUsuario.id) {
         await api.put(`/usuarios/${formUsuario.id}`, payload);
         showToast('Credencial de acesso atualizada com sucesso.', 'success');
       } else {
-        if (!payload.senha) return showToast('A senha inicial é obrigatória para novas credenciais.', 'error');
+        if (!payload.senha) return showToast('A senha inicial é obrigatória.', 'error');
         await api.post('/usuarios', payload);
         showToast('Nova identidade provisionada na rede.', 'success');
       }
@@ -81,7 +111,7 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
     setModalConfig({
       isOpen: true,
       title: 'Revogar Credencial',
-      message: `Atenção: Tem a certeza que deseja revogar permanentemente o acesso de "${nome}"? Esta ação eliminará o login do sistema.`,
+      message: `Atenção: Tem certeza que deseja revogar permanentemente o acesso de "${nome}"?`,
       isPrompt: false,
       onConfirm: async () => {
         try {
@@ -95,10 +125,13 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
     });
   };
 
+  // ==========================================
+  // FILTROS E KPIS
+  // ==========================================
   const usuariosExibidos = useMemo(() => {
-    if (!usuariosLista) return [];
+    if (!usuariosLocais) return [];
     
-    return usuariosLista.filter(u => {
+    return usuariosLocais.filter(u => {
       const displayNome = u.nome || u.nome_tecnico || u.nome_gerente || u.nome_coordenador || u.usuario || '';
       
       const matchBusca = 
@@ -113,20 +146,20 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
       const roleWeight = { 'ADMIN': 3, 'MANUTENCAO': 2, 'LOJA': 1 };
       return (roleWeight[b.role] || 0) - (roleWeight[a.role] || 0);
     });
-  }, [usuariosLista, busca, filtroPrivilegio]);
+  }, [usuariosLocais, busca, filtroPrivilegio]);
 
   const kpis = useMemo(() => {
-    if (!usuariosLista) return { total: 0, admin: 0, tech: 0, loja: 0 };
+    if (!usuariosLocais) return { total: 0, admin: 0, tech: 0, loja: 0 };
     let admin = 0; let tech = 0; let loja = 0;
     
-    usuariosLista.forEach(u => {
+    usuariosLocais.forEach(u => {
       if (u.role === 'ADMIN') admin++;
       else if (u.role === 'MANUTENCAO') tech++;
       else if (u.role === 'LOJA') loja++;
     });
 
-    return { total: usuariosLista.length, admin, tech, loja };
-  }, [usuariosLista]);
+    return { total: usuariosLocais.length, admin, tech, loja };
+  }, [usuariosLocais]);
 
   const getModalConfigInfo = () => {
     if (formUsuario.role === 'ADMIN') return { icon: ShieldAlert, color: 'var(--danger)', title: 'Privilégios Master (Admin)' };
@@ -144,7 +177,7 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
             <KeyRound size={26} />
           </div>
           <div>
-            <h3 className="iam-main-title">Controlo de Acessos e Identidade (IAM)</h3>
+            <h3 className="iam-main-title">Controle de Acessos e Identidade (IAM)</h3>
             <span className="iam-subtitle">Provisionamento seguro de credenciais, privilégios e revogações.</span>
           </div>
         </div>
@@ -154,11 +187,16 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
             <Wrench size={16} /> Emitir Acesso Técnico
           </button>
           <button className="btn btn-outline store-btn" onClick={() => abrirModalUsuario('GERENTE')}>
-            <Store size={16} /> Registar Operador
+            <Store size={16} /> Registrar Operador
           </button>
-          <button className="btn btn-danger-outline" onClick={() => abrirModalUsuario('OUTROS')}>
-            <ShieldAlert size={16} /> Provisionar Master
-          </button>
+
+          {/* 🔥 APENAS O DESENVOLVEDOR (DEV) PODE CRIAR NOVOS ADMINISTRADORES MASTER */}
+          {roleLogada === 'DEV' && (
+            <button className="btn btn-danger-outline" onClick={() => abrirModalUsuario('OUTROS')}>
+              <ShieldAlert size={16} /> Provisionar Master
+            </button>
+          )}
+
         </div>
       </div>
 
@@ -174,7 +212,7 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
           </div>
           <div className={`kpi-item-small info ${filtroPrivilegio === 'MANUTENCAO' ? 'active' : ''}`} onClick={() => setFiltroPrivilegio('MANUTENCAO')}>
             <span className="kpi-val">{kpis.tech}</span>
-            <span className="kpi-lbl">Equipa Técnica</span>
+            <span className="kpi-lbl">Equipe Técnica</span>
           </div>
           <div className={`kpi-item-small success ${filtroPrivilegio === 'LOJA' ? 'active' : ''}`} onClick={() => setFiltroPrivilegio('LOJA')}>
             <span className="kpi-val">{kpis.loja}</span>
@@ -201,6 +239,10 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
               <tr>
                 <th>Identidade Operacional</th>
                 <th>Login (Sistema)</th>
+                
+                {/* 🔥 SE FOR DEV, MOSTRA A EMPRESA (TENANT) NA TABELA */}
+                {roleLogada === 'DEV' && <th>Tenant Atribuído</th>}
+                
                 <th>Privilégio IAM</th>
                 <th>Restrição de Filial</th>
                 <th style={{ textAlign: 'right' }}>Auditoria e Ações</th>
@@ -209,10 +251,8 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
             <tbody>
               {usuariosExibidos.map(u => {
                 
-                // Mapeia inteligentemente o NOME (procura em todas as colunas do seu BD)
                 const displayNome = u.nome || u.nome_tecnico || u.nome_gerente || u.nome_coordenador || u.usuario || 'Sem Nome';
                 
-                // Mapeia inteligentemente o CARGO para exibir na UI
                 let displayCargo = u.cargo;
                 if (!displayCargo) {
                   if (u.role === 'ADMIN') displayCargo = 'Administrador de Sistema';
@@ -221,14 +261,12 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
                     if (u.nome_gerente) displayCargo = 'Gerente de Loja';
                     else if (u.nome_coordenador) displayCargo = 'Coordenador de Loja';
                     else displayCargo = 'Operador Local';
-                  } else {
-                    displayCargo = 'Utilizador Padrão';
-                  }
+                  } else { displayCargo = 'Usuário Padrão'; }
                 }
 
                 let roleColor = 'var(--success)'; let roleBg = 'rgba(16, 185, 129, 0.1)'; let roleLabel = 'Operador Local'; let IconLevel = Store;
                 if (u.role === 'ADMIN') { roleColor = 'var(--danger)'; roleBg = 'rgba(239, 68, 68, 0.1)'; roleLabel = 'Acesso Master (L3)'; IconLevel = ShieldAlert; } 
-                else if (u.role === 'MANUTENCAO') { roleColor = 'var(--info)'; roleBg = 'rgba(56, 189, 248, 0.1)'; roleLabel = 'Equipa Técnica (L2)'; IconLevel = Wrench; }
+                else if (u.role === 'MANUTENCAO') { roleColor = 'var(--info)'; roleBg = 'rgba(56, 189, 248, 0.1)'; roleLabel = 'Equipe Técnica (L2)'; IconLevel = Wrench; }
 
                 return (
                   <tr key={u.id} className="iam-table-row">
@@ -247,6 +285,15 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
                     <td data-label="Login">
                       <div className="login-badge"><UserCircle size={14} /> @{u.usuario}</div>
                     </td>
+
+                    {/* 🔥 SE FOR DEV, MOSTRA A EMPRESA (TENANT) NA TABELA */}
+                    {roleLogada === 'DEV' && (
+                      <td data-label="Tenant">
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Briefcase size={14} color="var(--primary)"/> {u.empresa || 'Desconhecida'}
+                        </span>
+                      </td>
+                    )}
                     
                     <td data-label="Privilégio">
                       <div className="role-security-badge" style={{ color: roleColor, background: roleBg, border: `1px solid color-mix(in srgb, ${roleColor} 30%, transparent)` }}>
@@ -264,7 +311,6 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
                     
                     <td data-label="Ações" style={{ textAlign: 'right' }}>
                       <button className="btn btn-action edit" onClick={() => { 
-                          // Mapeia o tipo de acesso corretamente para o Select do formulário de Edição
                           let editTipoAcesso = 'OUTROS';
                           if (u.role === 'LOJA') {
                             if (u.nome_gerente) editTipoAcesso = 'GERENTE';
@@ -310,6 +356,18 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
               <div className="form-section-iam">
                 <h4>1. Identificação Operacional</h4>
                 <div className="form-grid">
+                  
+                  {/* 🔥 APENAS O DEV CONSEGUE ESCOLHER A QUAL EMPRESA O USUÁRIO VAI PERTENCER */}
+                  {roleLogada === 'DEV' && (
+                    <div style={{ gridColumn: '1 / -1', marginBottom: '8px' }}>
+                      <label style={{ color: 'var(--primary)', fontWeight: '800' }}>Associar à Empresa (Tenant Exclusivo DEV)</label>
+                      <select className="select-input w-100" style={{ border: '2px solid var(--primary)', background: 'rgba(5, 150, 105, 0.05)' }} value={formUsuario.empresa} onChange={e => setFormUsuario({ ...formUsuario, empresa: e.target.value })} required>
+                        <option value="">Selecione a Empresa do Cliente...</option>
+                        {empresasDb.map(emp => <option key={emp.id} value={emp.nome}>{emp.nome}</option>)}
+                      </select>
+                    </div>
+                  )}
+
                   <div>
                     <label>Nome Completo (Identidade Oficial)</label>
                     <input type="text" value={formUsuario.nome} onChange={e => setFormUsuario({ ...formUsuario, nome: e.target.value })} placeholder="Ex: Engenheiro João Silva" required autoFocus />
@@ -336,7 +394,7 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
                   {formUsuario.role !== 'LOJA' && (
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <div className="global-access-warning">
-                        <ShieldCheck size={16} /> Esta credencial possui alcance global na rede (Sem restrição de filial).
+                        <ShieldCheck size={16} /> Esta credencial possui alcance global para as filiais do Cliente.
                       </div>
                     </div>
                   )}
@@ -347,7 +405,7 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
                 <h4>2. Autenticação & Segurança</h4>
                 <div className="form-grid">
                   <div>
-                    <label>Login (Nome de Utilizador)</label>
+                    <label>Login (Nome de Usuário)</label>
                     <input type="text" value={formUsuario.usuario} onChange={e => setFormUsuario({ ...formUsuario, usuario: e.target.value })} placeholder="Ex: jsilva.tech" required />
                   </div>
                   <div>
@@ -361,7 +419,7 @@ export default function GestaoUsuarios({ api, showToast, usuariosLista, carregar
               </div>
 
               <div className="modal-actions iam-modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setModalUsuario(false)}>Abortar Emissão</button>
+                <button type="button" className="btn btn-outline" onClick={() => setModalUsuario(false)}>Cancelar Emissão</button>
                 <button type="submit" className="btn btn-primary" style={{ backgroundColor: modalHeaderInfo.color, borderColor: modalHeaderInfo.color, boxShadow: `0 4px 15px color-mix(in srgb, ${modalHeaderInfo.color} 40%, transparent)` }}>
                   <Save size={18} /> Consolidar Identidade
                 </button>

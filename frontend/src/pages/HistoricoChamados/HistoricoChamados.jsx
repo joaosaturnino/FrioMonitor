@@ -35,13 +35,13 @@ const HistoricoCard = memo(({ c }) => {
           <User size={15} /> Abertura: <strong>{c.solicitante_nome || c.aberto_por}</strong>
         </div>
         <div className="historico-meta-item">
-          <Wrench size={15} /> Técnico: <strong>{c.tecnico_responsavel || 'Equipa Geral'}</strong>
+          <Wrench size={15} /> Técnico: <strong>{c.tecnico_responsavel || 'Equipe Geral'}</strong>
         </div>
       </div>
 
       <div className="historico-resolucao">
         <div className="historico-resolucao-title">
-          <CheckSquare size={16} color="var(--success)" /> Laudo Técnico Registado:
+          <CheckSquare size={16} color="var(--success)" /> Laudo Técnico Registrado:
         </div>
         <div className="historico-resolucao-text">
           {c.nota_resolucao}
@@ -132,7 +132,7 @@ export default function HistoricoChamados({
   const handleExcluirHistorico = async () => {
     setIsDeleting(true);
     try {
-      if (!api) throw new Error('Falha de ligação ao núcleo da API.');
+      if (!api) throw new Error('Falha de conexão ao núcleo da API.');
       
       await api.delete('/chamados/arquivados');
       
@@ -142,7 +142,7 @@ export default function HistoricoChamados({
       if (carregarChamados) carregarChamados();
       
     } catch (error) {
-      const mensagemErro = error.response?.data?.error || error.message || 'Erro ao comunicar com a Base de Dados';
+      const mensagemErro = error.response?.data?.error || error.message || 'Erro ao comunicar com o Banco de Dados';
       if (showToast) showToast(mensagemErro, 'error');
     } finally {
       setIsDeleting(false);
@@ -156,7 +156,7 @@ export default function HistoricoChamados({
       <div className="flex-header historico-header">
         <div>
           <h3 className="historico-chamados-title">Arquivo de Intervenções</h3>
-          <p className="historico-chamados-subtitle">Registo histórico de manutenções e laudos técnicos imutáveis.</p>
+          <p className="historico-chamados-subtitle">Registro histórico de manutenções e laudos técnicos imutáveis.</p>
         </div>
 
         <div className="action-group">
@@ -235,7 +235,7 @@ export default function HistoricoChamados({
           </div>
           <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Arquivo Limpo</h3>
           <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem', maxWidth: '400px' }}>
-            {busca ? 'Tente utilizar outros termos na sua pesquisa.' : 'Não existem ordens de serviço arquivadas na base de dados com os filtros atuais.'}
+            {busca ? 'Tente utilizar outros termos na sua pesquisa.' : 'Não existem ordens de serviço arquivadas no banco de dados com os filtros atuais.'}
           </p>
         </div>
       ) : (
@@ -256,10 +256,10 @@ export default function HistoricoChamados({
             </h3>
             
             <p style={{ color: 'var(--text-main)', fontSize: '0.95rem', lineHeight: '1.6', margin: '0 0 1.5rem 0' }}>
-              Tem a certeza que deseja <strong>excluir permanentemente</strong> todos os laudos técnicos arquivados? 
+              Tem certeza que deseja <strong>excluir permanentemente</strong> todos os laudos técnicos arquivados? 
               <br/><br/>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Esta ação <strong>não pode ser desfeita</strong> e todos os registos usados para efeito de auditoria e métricas ESG serão eliminados do núcleo do servidor.
+                Esta ação <strong>não pode ser desfeita</strong> e todos os registros usados para efeito de auditoria e métricas ESG serão eliminados do núcleo do servidor.
               </span>
             </p>
             

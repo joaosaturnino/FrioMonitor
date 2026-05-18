@@ -64,7 +64,7 @@ export default function Login({ isOffline, isLoginLoading, fazerLogin, loginErro
       await axios.put(`${API_URL}/usuarios/reset-senha`, { usuario: resetUser, novaSenha: newPassword });
       setView('success');
     } catch (error) {
-      setResetError(error.response?.data?.error || 'Erro ao redefinir. Verifique o utilizador.');
+      setResetError(error.response?.data?.error || 'Erro ao redefinir. Verifique o usuário.');
     } finally {
       setIsResetLoading(false);
     }
@@ -95,7 +95,7 @@ export default function Login({ isOffline, isLoginLoading, fazerLogin, loginErro
           <h2>TermoSync NOC</h2>
           <p className="system-status">
             {isOffline ? (
-              <span className="status-offline"><WifiOff size={14}/> LIGAÇÃO CORTADA</span>
+              <span className="status-offline"><WifiOff size={14}/> CONEXÃO PERDIDA</span>
             ) : (
               <span className="status-online"><Activity size={14} className="pulse-success-icon"/> SISTEMA ONLINE</span>
             )}
@@ -126,7 +126,7 @@ export default function Login({ isOffline, isLoginLoading, fazerLogin, loginErro
                 <User size={18} className="input-icon" />
                 <input 
                   type="text" 
-                  placeholder="ID de Utilizador" 
+                  placeholder="ID de Usuário" 
                   value={usuario}
                   onChange={(e) => setUsuario(e.target.value)}
                   disabled={isLoginLoading || isOffline}
@@ -174,7 +174,7 @@ export default function Login({ isOffline, isLoginLoading, fazerLogin, loginErro
               disabled={isLoginLoading || isOffline || !usuario || !senha}
             >
               {isLoginLoading ? (
-                <><Loader2 size={20} className="spinner" /> A AUTENTICAR...</>
+                <><Loader2 size={20} className="spinner" /> AUTENTICANDO...</>
               ) : (
                 <><Terminal size={20} /> INICIAR SESSÃO <ArrowRight size={18} /></>
               )}
@@ -186,7 +186,7 @@ export default function Login({ isOffline, isLoginLoading, fazerLogin, loginErro
         {view === 'reset' && (
           <form onSubmit={handleResetSubmit} className="login-form">
             <h3 className="form-title stagger-1"><ShieldCheck size={20}/> Redefinir Credenciais</h3>
-            <p className="form-desc stagger-1">Insira o seu ID e a nova chave de acesso para atualizar a segurança.</p>
+            <p className="form-desc stagger-1">Insira seu ID e a nova chave de acesso para atualizar a segurança.</p>
 
             {resetError && (
               <div className="login-alert error stagger-2">
@@ -196,12 +196,12 @@ export default function Login({ isOffline, isLoginLoading, fazerLogin, loginErro
             )}
 
             <div className="input-group stagger-2">
-              <label>ID de Utilizador</label>
+              <label>ID de Usuário</label>
               <div className="input-wrapper">
                 <User size={18} className="input-icon" />
                 <input 
                   type="text" 
-                  placeholder="O seu utilizador atual" 
+                  placeholder="Seu usuário atual" 
                   value={resetUser}
                   onChange={(e) => setResetUser(e.target.value)}
                   disabled={isResetLoading}
@@ -268,9 +268,9 @@ export default function Login({ isOffline, isLoginLoading, fazerLogin, loginErro
             <div className="stagger-1 success-icon-wrapper">
               <CheckCircle size={64} className="pulse-success-icon" />
             </div>
-            <h2 className="stagger-2">Protocolo Aceite</h2>
+            <h2 className="stagger-2">Protocolo Aceito</h2>
             <p className="stagger-3">
-              A sua credencial de acesso ao TermoSync foi redefinida. Utilize a nova chave para aceder à matriz.
+              Sua credencial de acesso ao TermoSync foi redefinida. Utilize a nova chave para acessar a matriz.
             </p>
             
             <button 
@@ -288,7 +288,7 @@ export default function Login({ isOffline, isLoginLoading, fazerLogin, loginErro
       <div className="login-footer stagger-4">
         <span>TermoSync NOC v3.0 Ultra</span>
         <span className="footer-dot">•</span>
-        <span>Ligação Encriptada (AES-256)</span>
+        <span>Conexão Criptografada (AES-256)</span>
       </div>
     </div>
   );

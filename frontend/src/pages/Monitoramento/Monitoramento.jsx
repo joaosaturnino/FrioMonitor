@@ -103,7 +103,7 @@ export default function Monitoramento({ isTemp, listaSetores, equipamentosDaFili
             <Search size={16} color="var(--text-muted)" />
             <input 
               type="text" 
-              placeholder="Procurar máquina..." 
+              placeholder="Pesquisar máquina..." 
               value={buscaNome} 
               onChange={e => setBuscaNome(e.target.value)} 
             />
@@ -164,7 +164,7 @@ export default function Monitoramento({ isTemp, listaSetores, equipamentosDaFili
           )}
           
           <h3>{modoFoco ? 'Operação 100% Segura' : 'Nenhuma Máquina Encontrada'}</h3>
-          <p>{modoFoco ? 'Não existem equipamentos fora dos parâmetros no momento. Ótimo trabalho!' : 'Não existem equipamentos registados ou a sua pesquisa não devolveu resultados.'}</p>
+          <p>{modoFoco ? 'Não existem equipamentos fora dos parâmetros no momento. Ótimo trabalho!' : 'Não existem equipamentos registrados ou a sua pesquisa não retornou resultados.'}</p>
         </div>
       ) : (
         /* GRELHA DE EQUIPAMENTOS */
@@ -194,9 +194,9 @@ export default function Monitoramento({ isTemp, listaSetores, equipamentosDaFili
             } else if (!eq.motor_ligado) {
               status = 'PARADO'; statusCor = 'var(--danger)'; IconeStatus = Power; statusLabel = 'Motor Parado';
             } else if (isAcima) {
-              status = 'ALERTA'; statusCor = 'var(--danger)'; IconeStatus = ArrowUpRight; statusLabel = isTemp ? 'Alta Temperatura' : 'Alta Humidade';
+              status = 'ALERTA'; statusCor = 'var(--danger)'; IconeStatus = ArrowUpRight; statusLabel = isTemp ? 'Alta Temperatura' : 'Alta Umidade';
             } else if (isAbaixo) {
-              status = 'ALERTA'; statusCor = '#38bdf8'; IconeStatus = ArrowDownRight; statusLabel = isTemp ? 'Baixa Temperatura' : 'Baixa Humidade';
+              status = 'ALERTA'; statusCor = '#38bdf8'; IconeStatus = ArrowDownRight; statusLabel = isTemp ? 'Baixa Temperatura' : 'Baixa Umidade';
             }
 
             // Cálculo Inteligente do Ponteiro (Com margem visual de 20% para fora dos limites)

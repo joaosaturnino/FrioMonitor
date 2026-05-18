@@ -47,7 +47,7 @@ const ChamadoCard = memo(({ c, isOffline, onResolver, onArquivar }) => {
       <div className="chamado-body">
         <div className="chamado-meta">
           <span><User size={14} /> Solicitante: {c.solicitante_nome || c.aberto_por}</span>
-          <span><Wrench size={14} /> Técnico: {c.tecnico_responsavel || 'Aguardando Despacho'}</span>
+          <span><Wrench size={14} /> Técnico: {c.tecnico_responsavel || 'Aguardando Atribuição'}</span>
           <span><Clock size={14} /> Aberto: {new Date(c.data_abertura).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
         </div>
         
@@ -230,7 +230,7 @@ export default function Chamados({
       <div className="chamados-header">
         <div>
           <h3 className="chamados-title">Gestão de Ocorrências (OS)</h3>
-          <p className="chamados-subtitle">Painel de Despacho e Intervenções Técnicas</p>
+          <p className="chamados-subtitle">Painel de Atribuição e Intervenções Técnicas</p>
         </div>
 
         <div className="chamados-actions">
@@ -317,7 +317,7 @@ export default function Chamados({
           <p className="empty-subtitle">Não existem ordens de serviço ativas. Toda a manutenção está em dia!</p>
         </div>
       ) : (
-        /* GRELHA DE CARTÕES (TICKETS) */
+        /* GRADE DE CARTÕES (TICKETS) */
         <div className="grid-cards stagger-3">
           {chamadosAtivosFiltrados.map(c => (
             <ChamadoCard 
@@ -341,7 +341,7 @@ export default function Chamados({
             
             <form onSubmit={salvarChamado}>
               <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label>Máquina / Equipamento com Avaria</label>
+                <label>Máquina / Equipamento com Problema</label>
                 <select className="select-input w-100" value={formChamado.equipamento_id} onChange={e => setFormChamado({...formChamado, equipamento_id: e.target.value})} required>
                   <option value="">-- Selecione a Máquina --</option>
                   {equipamentosDaFilial?.map(eq => <option key={eq.id} value={eq.id}>{eq.nome} ({eq.filial || 'Base'})</option>)}
@@ -350,7 +350,7 @@ export default function Chamados({
 
               <div className="form-group" style={{ marginBottom: '1rem' }}>
                 <label>Descrição do Problema / Motivo da OS</label>
-                <textarea className="textarea-chamado" value={formChamado.descricao} onChange={e => setFormChamado({...formChamado, descricao: e.target.value})} placeholder="Descreva os sintomas da avaria detalhadamente..." rows="4" required />
+                <textarea className="textarea-chamado" value={formChamado.descricao} onChange={e => setFormChamado({...formChamado, descricao: e.target.value})} placeholder="Descreva os sintomas do defeito detalhadamente..." rows="4" required />
               </div>
 
               <div className="form-grid-chamados">
@@ -366,7 +366,7 @@ export default function Chamados({
                 <div className="form-group">
                   <label>Técnico Designado</label>
                   <select className="select-input w-100" value={formChamado.tecnico_responsavel} onChange={e => setFormChamado({...formChamado, tecnico_responsavel: e.target.value})}>
-                    <option value="">Aguardando Despacho</option>
+                    <option value="">Aguardando Atribuição</option>
                     {tecnicosDb?.map(tec => <option key={tec.id} value={tec.nome_tecnico}>{tec.nome_tecnico}</option>)}
                   </select>
                 </div>
@@ -398,7 +398,7 @@ export default function Chamados({
               className="textarea-chamado" 
               value={modalResolver.nota} 
               onChange={e => setModalResolver({...modalResolver, nota: e.target.value})} 
-              placeholder="Ex: Trocado termostato e motor de arranque. Testes a 100%..." 
+              placeholder="Ex: Trocado termostato e compressor. Testes 100%..." 
               rows="5" autoFocus 
             />
             <div className="modal-actions-chamados" style={{ marginTop: '1.5rem' }}>

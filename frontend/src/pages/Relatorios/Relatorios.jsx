@@ -74,10 +74,10 @@ export default function Relatorios({
           <span className="kpi-relatorios-subtitle">Impacto termodinâmico/vida útil</span>
         </div>
 
-        {/* KPI 4: Pico Térmico Registado no Período */}
+        {/* KPI 4: Pico Térmico Registrado no Período */}
         <div className="kpi-relatorios-card">
           <div className="kpi-relatorios-header">
-            <span className="kpi-relatorios-title">Pico Térmico Registado</span>
+            <span className="kpi-relatorios-title">Pico Térmico Registrado</span>
             <div className="kpi-relatorios-icon-box" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
               <Thermometer size={20} color="var(--danger)" />
             </div>
@@ -85,12 +85,12 @@ export default function Relatorios({
           <div className="kpi-relatorios-value kpi-neon-red">
             {kpis?.kpiMaxT || '--'} <span style={{ fontSize: '1.2rem', opacity: 0.6 }}>°C</span>
           </div>
-          <span className="kpi-relatorios-subtitle">Excursão térmica máxima detetada</span>
+          <span className="kpi-relatorios-subtitle">Excursão térmica máxima detectada</span>
         </div>
       </div>
 
       {/* =========================================================
-          SEÇÃO 2: PAINEL DE CONTROLOS E COMANDOS TÁTICOS
+          SEÇÃO 2: PAINEL DE CONTROLES E COMANDOS TÁTICOS
           ========================================================= */}
       <div className="card relatorios-controls-card stagger-2">
         <div className="relatorios-controls-header">
@@ -173,7 +173,7 @@ export default function Relatorios({
           {!dadosGraficoFiltrados || dadosGraficoFiltrados.length === 0 ? (
             <div className="chart-loading">
               <div className="radar-scanner-small"></div>
-              A varrer base de dados térmica...
+              Varrendo base de dados térmica...
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={380}>
@@ -203,7 +203,7 @@ export default function Relatorios({
                 <Line type="monotone" dataKey="temperatura" name="Temp (°C)" stroke="#10b981" strokeWidth={2.5} dot={false} activeDot={{ r: 6, strokeWidth: 0, fill: '#10b981' }} />
                 
                 {dadosGraficoFiltrados[0]?.umidade > 0 && (
-                  <Line type="monotone" dataKey="umidade" name="Humidade (%)" stroke="#38bdf8" strokeWidth={2} dot={false} strokeDasharray="5 5" />
+                  <Line type="monotone" dataKey="umidade" name="Umidade (%)" stroke="#38bdf8" strokeWidth={2} dot={false} strokeDasharray="5 5" />
                 )}
               </LineChart>
             </ResponsiveContainer>

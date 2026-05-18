@@ -114,8 +114,19 @@
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 
-.spinner { animation: spin 1s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* =========================================
    KPIS RÁPIDOS
@@ -137,21 +148,44 @@
   display: flex;
   align-items: center;
   gap: 15px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
 }
 
 .kpi-icon-wrap {
-  width: 44px; height: 44px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
   background: rgba(100, 116, 139, 0.1);
   color: var(--text-muted);
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.kpi-icon-wrap.info { background: rgba(56, 189, 248, 0.1); color: var(--secondary); }
-.kpi-icon-wrap.success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
 
-.kpi-value { font-size: 1.4rem; font-weight: 800; color: var(--text-main); line-height: 1; margin-bottom: 4px; }
-.kpi-label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+.kpi-icon-wrap.info {
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--secondary);
+}
+
+.kpi-icon-wrap.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.kpi-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.kpi-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
 
 /* =========================================
    CARTÃO DE ARQUIVO (HISTÓRICO)
@@ -160,7 +194,8 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 1.5rem;
-  will-change: transform; /* Otimização de hardware (GPU) */
+  will-change: transform;
+  /* Otimização de hardware (GPU) */
 }
 
 .historico-card {
@@ -170,7 +205,7 @@
   /* Transições Otimizadas para não asfixiar a CPU */
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(0,0,0,0.01) 100%);
+  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(0, 0, 0, 0.01) 100%);
   border: 1px solid var(--border);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
   position: relative;
@@ -178,12 +213,16 @@
 }
 
 .dark-theme .historico-card {
-  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(255,255,255,0.01) 100%);
+  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(255, 255, 255, 0.01) 100%);
 }
 
 .historico-card::before {
   content: '';
-  position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
   background: var(--text-muted);
   opacity: 0.5;
 }
@@ -193,7 +232,11 @@
   box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.08);
   border-color: color-mix(in srgb, var(--primary) 30%, transparent);
 }
-.historico-card:hover::before { background: var(--primary); opacity: 1; }
+
+.historico-card:hover::before {
+  background: var(--primary);
+  opacity: 1;
+}
 
 .historico-header {
   display: flex;
@@ -212,7 +255,11 @@
   gap: 10px;
 }
 
-.historico-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.historico-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
 .historico-badge {
   padding: 4px 10px;
@@ -225,7 +272,11 @@
   border: 1px solid rgba(100, 116, 139, 0.2);
 }
 
-.badge-urgencia { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+.badge-urgencia {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-main);
+}
 
 /* Caixa com a descrição original */
 .historico-desc-box {
@@ -240,9 +291,17 @@
   border: 1px solid var(--border);
 }
 
-.dark-theme .historico-desc-box { background: rgba(255, 255, 255, 0.02); }
+.dark-theme .historico-desc-box {
+  background: rgba(255, 255, 255, 0.02);
+}
 
-.quote-mark { color: var(--text-muted); font-size: 1.2rem; opacity: 0.5; font-family: Georgia, serif; margin: 0 2px;}
+.quote-mark {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  opacity: 0.5;
+  font-family: Georgia, serif;
+  margin: 0 2px;
+}
 
 .historico-meta-grid {
   display: grid;
@@ -260,7 +319,10 @@
   color: var(--text-muted);
 }
 
-.historico-meta-item strong { color: var(--text-main); font-weight: 700; }
+.historico-meta-item strong {
+  color: var(--text-main);
+  font-weight: 700;
+}
 
 /* =========================================
    ÁREA DE RESOLUÇÃO (LAUDO DE AUDITORIA)
@@ -274,7 +336,9 @@
   position: relative;
 }
 
-.dark-theme .historico-resolucao { background: rgba(16, 185, 129, 0.06); }
+.dark-theme .historico-resolucao {
+  background: rgba(16, 185, 129, 0.06);
+}
 
 .historico-resolucao-title {
   display: flex;
@@ -392,9 +456,18 @@
 }
 
 /* Scroll interno do modal */
-.historico-modal-box::-webkit-scrollbar { width: 5px; }
-.historico-modal-box::-webkit-scrollbar-track { background: transparent; }
-.historico-modal-box::-webkit-scrollbar-thumb { background: var(--danger); border-radius: 10px; }
+.historico-modal-box::-webkit-scrollbar {
+  width: 5px;
+}
+
+.historico-modal-box::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.historico-modal-box::-webkit-scrollbar-thumb {
+  background: var(--danger);
+  border-radius: 10px;
+}
 
 .modal-actions-historico {
   display: flex;
@@ -430,15 +503,24 @@
     justify-content: center;
   }
 
-  .historico-kpis { flex-direction: column; gap: 10px; }
-  .kpi-box { width: 100%; }
+  .historico-kpis {
+    flex-direction: column;
+    gap: 10px;
+  }
 
-  .historico-grid { grid-template-columns: 1fr; }
+  .kpi-box {
+    width: 100%;
+  }
+
+  .historico-grid {
+    grid-template-columns: 1fr;
+  }
 
   /* Modais em Telemóvel */
   .historico-modal-box {
     padding: 1.25rem;
-    max-height: 85dvh; /* Evita conflitos com os teclados de telemóvel */
+    max-height: 85dvh;
+    /* Evita conflitos com os teclados de telemóvel */
   }
 
   /* Botões dos modais empilham uns em cima dos outros no Mobile */

@@ -5,7 +5,7 @@
   /* Fontes Globais Otimizadas */
   --sans: 'Montserrat';
   --mono: 'Fira Code', 'Courier New', Consolas, monospace;
-  
+
   /* Força a renderização com motores escuros nativos do navegador */
   color-scheme: dark light;
   font-synthesis: none;
@@ -17,13 +17,17 @@
 /* Reset Crítico de Margens e Prevenção de FOUC (Flash of Unstyled Content).
    O fundo hiper-escuro aqui previne um "flash branco" antes do React injetar o App.jsx
 */
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100vw;
-  height: 100dvh; /* Dynamic Viewport - Crítico para iOS/Android */
-  overflow: hidden; /* O Scroll será gerido exclusivamente pelos componentes internos */
-  background-color: #020617; /* Slate-950 puro (O fundo escuro do NOC) */
+  height: 100dvh;
+  /* Dynamic Viewport - Crítico para iOS/Android */
+  overflow: hidden;
+  /* O Scroll será gerido exclusivamente pelos componentes internos */
+  background-color: #020617;
+  /* Slate-950 puro (O fundo escuro do NOC) */
   color: #f8fafc;
   font-family: var(--sans);
 }
@@ -41,12 +45,17 @@ html, body {
 }
 
 /* Reset de Box-Sizing Universal e Blindado */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 /* Herança forçada para tipografia de inputs */
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font-family: inherit;
 }
 

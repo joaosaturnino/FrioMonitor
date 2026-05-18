@@ -69,13 +69,13 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .kpi-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
 }
 
 .kpi-icon {
@@ -92,14 +92,40 @@
   flex-direction: column;
 }
 
-.kpi-value { font-size: 1.3rem; font-weight: 800; color: var(--text-main); }
-.kpi-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;}
+.kpi-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.kpi-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
 /* Cores específicas dos KPIs */
-.kpi-item.total .kpi-icon { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-.kpi-item.warning .kpi-icon { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-.kpi-item.info .kpi-icon { background: rgba(14, 165, 233, 0.1); color: #0ea5e9; }
-.kpi-item.ok .kpi-icon { background: rgba(100, 116, 139, 0.1); color: var(--text-muted); }
+.kpi-item.total .kpi-icon {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.kpi-item.warning .kpi-icon {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.kpi-item.info .kpi-icon {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0ea5e9;
+}
+
+.kpi-item.ok .kpi-icon {
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--text-muted);
+}
 
 .gestao-lojas-card {
   margin-top: 0.5rem;
@@ -258,8 +284,14 @@
    RESPONSIVIDADE (MOBILE)
    ========================================= */
 @media (max-width: 768px) {
-  .gestao-lojas-header { flex-direction: column; align-items: stretch; }
-  .loja-search-box { min-width: 100%; }
+  .gestao-lojas-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .loja-search-box {
+    min-width: 100%;
+  }
 
   .gestao-lojas-card .table thead {
     display: none;
@@ -298,7 +330,52 @@
     margin-right: 15px;
   }
 
-  .loja-name-box, .contact-box, .leadership-box {
+  .loja-name-box,
+  .contact-box,
+  .leadership-box {
     align-items: flex-end;
   }
+}
+
+/* =========================================
+   ESTILOS EXCLUSIVOS DO DESENVOLVEDOR (DEV)
+   ========================================= */
+
+.tenant-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border: 1px dashed rgba(168, 85, 247, 0.3);
+}
+
+.btn-toggle-status {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+  width: 100%;
+}
+
+.btn-toggle-status:hover {
+  transform: scale(1.1);
+}
+
+.empresa-row.row-suspensa td,
+.loja-table-row.row-suspensa td {
+  opacity: 0.7;
+  background: rgba(239, 68, 68, 0.03);
+}
+
+.loja-table-row.row-suspensa .loja-name-box span:first-child {
+  color: var(--danger);
+  text-decoration: line-through;
 }

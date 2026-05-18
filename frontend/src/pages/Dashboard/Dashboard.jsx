@@ -1,11 +1,25 @@
 import React, { useCallback, memo, useState, useMemo } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { 
-  AlertTriangle, Wifi, Snowflake, Power, DoorOpen, 
+  AlertTriangle, Wifi, Snowflake, Power, DoorOpen, Droplets, 
   ActivitySquare, ClipboardCheck, CheckCircle, Server, 
-  Activity, ThermometerSnowflake, AlertOctagon, MessageSquare, Send, X, Clock, Zap, Radio
+  Activity, ThermometerSnowflake, AlertOctagon, MessageSquare, Send, X, Clock, Radio, Zap
 } from 'lucide-react';
 import './Dashboard.css';
+
+export const getAlertConfig = (tipo_alerta) => {
+  const configs = {
+    'REDE': { icon: Wifi, color: 'var(--warning)', action: 'Analisar Rede', critical: true },
+    'DEGELO': { icon: Snowflake, color: 'var(--secondary)', action: 'Finalizar Degelo', critical: false },
+    'MECANICA': { icon: Power, color: '#f97316', action: 'Acionar Manutenção', critical: true },
+    'PORTA': { icon: DoorOpen, color: '#e11d48', action: 'Verificar Porta', critical: true },
+    'TEMPERATURA': { icon: ThermometerSnowflake, color: '#ef4444', action: 'Normalizar Temp.', critical: true },
+    'UMIDADE': { icon: Droplets, color: '#0ea5e9', action: 'Ajustar Umidade', critical: false },
+    'METROLOGIA': { icon: ClipboardCheck, color: '#6366f1', action: 'Agendar Calibração', critical: true },
+    'PREDITIVO': { icon: ActivitySquare, color: '#8b5cf6', action: 'Prevenção', critical: false }
+  };
+  return configs[tipo_alerta] || { icon: AlertTriangle, color: 'var(--danger)', action: 'Investigar', critical: true };
+};
 
 const StatCard = memo(({ title, value, icon: Icon, iconBg, valClass = '', isPulsing = false }) => (
   <div className={`summary-card ${isPulsing ? 'pulsing-card' : ''}`}>
@@ -51,7 +65,7 @@ const ChatDrawer = ({ notif, onClose, contatosDb, irParaChat, showToast, socket,
       <div className="chat-drawer" onClick={(e) => e.stopPropagation()}>
         <div className="chat-drawer-header">
           <div className="chat-header-info">
-            <h4>Escalonar Emergência</h4>
+            <h4>Escalar Emergência</h4>
             <p>{notif.equipamento_nome} • {notif.filial}</p>
           </div>
           <button className="btn-close-drawer" onClick={onClose}><X size={24} /></button>
@@ -83,6 +97,40 @@ const ChatDrawer = ({ notif, onClose, contatosDb, irParaChat, showToast, socket,
   );
 };
 
+const CustomTooltip = ({ active, payload, isDarkMode }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{ 
+        backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)', 
+        backdropFilter: 'blur(10px)', 
+        borderRadius: '12px', 
+        border: '1px solid var(--border)',
+        color: isDarkMode ? '#f8fafc' : '#0f172a',
+        padding: '10px'
+      }}>
+        <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{payload[0].name}</p>
+        <p style={{ margin: 0, fontWeight: '700', color: payload[0].payload.fill || '#38bdf8' }}>
+          Quantidade: {payload[0].value}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const EmptyTooltip = () => (
+  <div style={{
+    padding: '8px', 
+    background: 'var(--card-bg)', 
+    border: '1px solid var(--border)', 
+    borderRadius: '8px', 
+    fontSize: '0.8rem', 
+    fontWeight: '600'
+  }}>
+    Aguardando telemetria...
+  </div>
+);
+
 export default function Dashboard({ 
   qtdTotal, qtdOperando, qtdDegelo, qtdFalha, dadosDonutStatus = [], 
   notificacoesDaFilial = [], resolverTodasNotificacoes, isOffline, pedirNotaResolucao, isDarkMode,
@@ -111,11 +159,10 @@ export default function Dashboard({
     });
   }, [notificacoesDaFilial, filtroRisco]);
 
-  // Cores fixas para contornar bugs de renderização no Recharts
   const DONUT_COLORS = {
-    'Ok': '#10b981',      // Verde
-    'Degelo': '#38bdf8',  // Azul
-    'Falha': '#ef4444'    // Vermelho
+    'Ok': '#10b981',      
+    'Degelo': '#38bdf8',  
+    'Falha': '#ef4444'    
   };
 
   const temDadosDonut = dadosDonutStatus && dadosDonutStatus.length > 0;
@@ -124,7 +171,6 @@ export default function Dashboard({
   return (
     <div className="anim-fade-in dashboard-container">
       
-      {/* ÍNDICE DE SAÚDE DA REDE (SLA ADVANCED) */}
       <div className={`health-banner ${saudeRede.class} stagger-1`}>
         <div className="health-info">
           <Zap size={32} className="health-icon" />
@@ -153,7 +199,6 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* 1. SEÇÃO DE KPIs GERAIS */}
       <div className="dashboard-grid stagger-2">
         <div className="summary-cards">
           <StatCard title="Máquinas na Rede" value={qtdTotal} icon={Server} iconBg="icon-bg-gray" />
@@ -164,7 +209,6 @@ export default function Dashboard({
 
         <div className="donut-container">
           <span className="donut-title">Distribuição de Carga</span>
-          {/* Wrapper blindado para garantir que o Recharts nunca colapse a altura */}
           <div style={{ width: '100%', height: '240px', minHeight: '240px', position: 'relative', marginTop: '10px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -179,21 +223,13 @@ export default function Dashboard({
                       dataKey="value" 
                       nameKey="name"
                       stroke="none"
-                      isAnimationActive={false} /* CRUCIAL: Desativa animação para permitir updates em Tempo Real (2 segundos) sem bugar o SVG */
+                      isAnimationActive={false}
                     >
                       {dadosDonutStatus.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={DONUT_COLORS[entry.name] || '#94a3b8'} />
                       ))}
                     </Pie>
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)', 
-                        backdropFilter: 'blur(10px)', borderRadius: '12px', border: '1px solid var(--border)',
-                        color: isDarkMode ? '#f8fafc' : '#0f172a'
-                      }} 
-                      itemStyle={{ fontWeight: '700', color: isDarkMode ? '#f8fafc' : '#0f172a' }}
-                      isAnimationActive={false}
-                    />
+                    <Tooltip content={<CustomTooltip isDarkMode={isDarkMode} />} isAnimationActive={false} />
                     <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '0.85rem', fontWeight: '600', paddingBottom: '10px' }}/>
                   </>
                 ) : (
@@ -209,11 +245,7 @@ export default function Dashboard({
                       fill={isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}
                       isAnimationActive={false}
                     />
-                    <Tooltip content={
-                      <div style={{padding: '8px', background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '600'}}>
-                        Aguardando telemetria...
-                      </div>
-                    } />
+                    <Tooltip content={<EmptyTooltip />} isAnimationActive={false} />
                   </>
                 )}
               </PieChart>
@@ -222,7 +254,6 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* 2. CABEÇALHO DE TRIAGEM COM FILTROS */}
       <div className="flex-header stagger-3" style={{ padding: 0, background: 'transparent', border: 'none', boxShadow: 'none' }}>
         <h3 className="section-title">Monitor de Incidentes Ativos</h3>
         
@@ -243,7 +274,6 @@ export default function Dashboard({
         </div>
       </div>
       
-      {/* 3. LISTAGEM DE ALERTAS E RADAR */}
       {!alertasExibidos?.length ? (
         <div className="empty-state dashboard-empty stagger-3">
           <div className="radar-box">
@@ -255,7 +285,7 @@ export default function Dashboard({
           </div>
           <h3 className="empty-title">Nenhuma Ocorrência Detectada</h3>
           <p className="empty-subtitle">
-            {filtroRisco === 'TODOS' ? 'O radar não detecta anomalias térmicas ou mecânicas. A infraestrutura encontra-se operável e dentro das métricas.' : 'Não existem ocorrências ativas para o filtro de risco selecionado.'}
+            {filtroRisco === 'TODOS' ? 'O radar não detecta anomalias térmicas ou mecânicas. A infraestrutura encontra-se operacional e dentro das métricas.' : 'Não existem ocorrências ativas para o filtro de risco selecionado.'}
           </p>
         </div>
       ) : (
@@ -272,7 +302,6 @@ export default function Dashboard({
         </div>
       )}
 
-      {/* 4. RODAPÉ DE NOTÍCIAS (LIVE TICKER) */}
       <div className="noc-ticker-wrap stagger-4">
         <div className="noc-ticker-label">LATEST EVENTS</div>
         <div className="noc-ticker">
@@ -312,17 +341,7 @@ export default function Dashboard({
 }
 
 const AlertCard = memo(({ notif, onResolve, onAbrirChat, isOffline }) => {
-  const configs = {
-    'REDE': { icon: Wifi, color: 'var(--warning)', action: 'Verificar Nó de Rede', critical: false },
-    'DEGELO': { icon: Snowflake, color: 'var(--secondary)', action: 'Ocultar Degelo', critical: false },
-    'MECANICA': { icon: Power, color: '#f97316', action: 'Assinalar Manutenção', critical: true },
-    'PORTA': { icon: DoorOpen, color: '#e11d48', action: 'Confirmar Fechamento', critical: true },
-    'PREDITIVO': { icon: ActivitySquare, color: '#8b5cf6', action: 'Analisar Previsão', critical: false },
-    'TEMPERATURA': { icon: ThermometerSnowflake, color: '#ef4444', action: 'Resolver Excursão', critical: true },
-    'METROLOGIA': { icon: ClipboardCheck, color: '#6366f1', action: 'Arquivar Calibração', critical: false }
-  };
-
-  const tipo = configs[notif.tipo_alerta] || { icon: AlertTriangle, color: 'var(--danger)', action: 'Resolver Anomalia', critical: true };
+  const tipo = getAlertConfig(notif.tipo_alerta);
   const IconCmp = tipo.icon;
 
   return (

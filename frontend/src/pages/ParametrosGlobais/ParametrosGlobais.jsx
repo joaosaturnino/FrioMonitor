@@ -21,7 +21,6 @@ export default function ParametrosGlobais({
     intervalo_degelo: '', duracao_degelo: '' 
   });
 
-  // Filtragem Instantânea
   const setoresFiltrados = useMemo(() => {
     if (!listaSetores) return [];
     return listaSetores.filter(s => s.nome.toLowerCase().includes(buscaSetor.toLowerCase()));
@@ -32,7 +31,6 @@ export default function ParametrosGlobais({
     return listaTipos.filter(t => t.nome.toLowerCase().includes(buscaTipo.toLowerCase()));
   }, [listaTipos, buscaTipo]);
 
-  // KPIs de Políticas
   const kpis = useMemo(() => {
     return {
       setores: listaSetores?.length || 0,
@@ -83,7 +81,7 @@ export default function ParametrosGlobais({
     setModalConfig({
       isOpen: true,
       title: `Eliminar ${isSetor ? 'Zona Operacional' : 'Matriz de SLA'}`,
-      message: `Tem a certeza que deseja remover a política "${nome}"? Máquinas associadas a esta regra poderão necessitar de reconfiguração.`,
+      message: `Tem certeza que deseja remover a política "${nome}"? Máquinas associadas a esta regra poderão necessitar de reconfiguração.`,
       isPrompt: false,
       onConfirm: async () => {
         try {
@@ -109,7 +107,6 @@ export default function ParametrosGlobais({
   return (
     <div className="anim-fade-in stagger-1">
       
-      {/* CABEÇALHO DO MÓDULO */}
       <div className="flex-header parametros-header-area">
         <div className="parametros-title-box">
           <div className="icon-circle" style={{ background: 'rgba(56, 189, 248, 0.15)', color: 'var(--info)', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
@@ -131,7 +128,6 @@ export default function ParametrosGlobais({
         </div>
       </div>
 
-      {/* KPIs DE POLÍTICAS */}
       <div className="policy-kpi-bar stagger-2">
         <div className="kpi-item">
           <div className="kpi-icon zone"><LayoutGrid size={20}/></div>
@@ -156,10 +152,8 @@ export default function ParametrosGlobais({
         </div>
       </div>
 
-      {/* GRELHA PRINCIPAL (SETORES vs TIPOS) */}
       <div className="parametros-grid stagger-3">
         
-        {/* COLUNA 1: ZONAS / SETORES */}
         <div className="card policy-card">
           <div className="policy-card-header">
             <h4 className="policy-card-title"><LayoutGrid size={18} color="var(--info)" /> Topologia de Setores</h4>
@@ -192,7 +186,6 @@ export default function ParametrosGlobais({
           </div>
         </div>
 
-        {/* COLUNA 2: MATRIZES SLA / TIPOS */}
         <div className="card policy-card border-green">
           <div className="policy-card-header">
             <h4 className="policy-card-title"><ShieldCheck size={18} color="var(--success)" /> Matrizes de Compliance (SLA)</h4>
@@ -220,11 +213,11 @@ export default function ParametrosGlobais({
                       </div>
                     </div>
                     
-                    {/* Tags de Limites Operacionais (Blueprints) */}
                     <div className="sla-limits-grid">
-                      <span className="sla-tag termico"><Thermometer size={12}/> {t.temp_min}°C a {t.temp_max}°C</span>
+                      {/* O verificação !== undefined && !== null previne o bug visual na lista */}
+                      <span className="sla-tag termico"><Thermometer size={12}/> {t.temp_min != null ? t.temp_min : '--'}°C a {t.temp_max != null ? t.temp_max : '--'}°C</span>
                       <span className="sla-tag higro"><Droplets size={12}/> {t.umidade_min || 0}% a {t.umidade_max || 0}%</span>
-                      <span className="sla-tag degelo"><Snowflake size={12}/> A cada {t.intervalo_degelo}h ({t.duracao_degelo}m)</span>
+                      <span className="sla-tag degelo"><Snowflake size={12}/> A cada {t.intervalo_degelo || '--'}h ({t.duracao_degelo || '--'}m)</span>
                     </div>
                   </div>
                 </div>
@@ -234,7 +227,6 @@ export default function ParametrosGlobais({
         </div>
       </div>
 
-      {/* MODAL DE EDITOR DE POLÍTICAS */}
       {modalParametro.isOpen && (
         <div className="modal-overlay">
           <div className="modal-content policy-modal-content">
@@ -254,7 +246,7 @@ export default function ParametrosGlobais({
                 <label>Nomenclatura Oficial da Regra</label>
                 <input 
                   type="text" 
-                  value={modalParametro.nome} 
+                  value={modalParametro.nome || ''} 
                   onChange={e => setModalParametro({...modalParametro, nome: e.target.value})} 
                   placeholder={modalParametro.entidade === 'SETOR' ? "Ex: Corredor de Laticínios" : "Ex: Congelados Premium"} 
                   required autoFocus 
@@ -266,24 +258,25 @@ export default function ParametrosGlobais({
                   <div className="form-section-policy">
                     <h4 className="section-divider"><Thermometer size={14} color="var(--danger)"/> Limites Térmicos (°C)</h4>
                     <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                      <div><label>Alarme Mínimo</label><input type="number" step="0.1" value={modalParametro.temp_min} onChange={e => setModalParametro({...modalParametro, temp_min: e.target.value})} required /></div>
-                      <div><label>Alarme Máximo</label><input type="number" step="0.1" value={modalParametro.temp_max} onChange={e => setModalParametro({...modalParametro, temp_max: e.target.value})} required /></div>
+                      {/* O '|| ''' previne que o React reclame de input nulo */}
+                      <div><label>Alarme Mínimo</label><input type="number" step="0.1" value={modalParametro.temp_min ?? ''} onChange={e => setModalParametro({...modalParametro, temp_min: e.target.value})} required /></div>
+                      <div><label>Alarme Máximo</label><input type="number" step="0.1" value={modalParametro.temp_max ?? ''} onChange={e => setModalParametro({...modalParametro, temp_max: e.target.value})} required /></div>
                     </div>
                   </div>
 
                   <div className="form-section-policy">
-                    <h4 className="section-divider"><Droplets size={14} color="var(--info)"/> Controlo Higrométrico (%)</h4>
+                    <h4 className="section-divider"><Droplets size={14} color="var(--info)"/> Controle Higrométrico (%)</h4>
                     <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                      <div><label>Humidade Mínima</label><input type="number" step="0.1" value={modalParametro.umidade_min} onChange={e => setModalParametro({...modalParametro, umidade_min: e.target.value})} required /></div>
-                      <div><label>Humidade Máxima</label><input type="number" step="0.1" value={modalParametro.umidade_max} onChange={e => setModalParametro({...modalParametro, umidade_max: e.target.value})} required /></div>
+                      <div><label>Umidade Mínima</label><input type="number" step="0.1" value={modalParametro.umidade_min ?? ''} onChange={e => setModalParametro({...modalParametro, umidade_min: e.target.value})} /></div>
+                      <div><label>Umidade Máxima</label><input type="number" step="0.1" value={modalParametro.umidade_max ?? ''} onChange={e => setModalParametro({...modalParametro, umidade_max: e.target.value})} /></div>
                     </div>
                   </div>
 
                   <div className="form-section-policy" style={{ marginBottom: 0 }}>
                     <h4 className="section-divider"><Snowflake size={14} color="var(--secondary)"/> Padrão de Degelo</h4>
                     <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                      <div><label>Frequência (Horas)</label><input type="number" min="1" value={modalParametro.intervalo_degelo} onChange={e => setModalParametro({...modalParametro, intervalo_degelo: e.target.value})} required /></div>
-                      <div><label>Duração (Minutos)</label><input type="number" min="1" value={modalParametro.duracao_degelo} onChange={e => setModalParametro({...modalParametro, duracao_degelo: e.target.value})} required /></div>
+                      <div><label>Frequência (Horas)</label><input type="number" min="1" value={modalParametro.intervalo_degelo ?? ''} onChange={e => setModalParametro({...modalParametro, intervalo_degelo: e.target.value})} required /></div>
+                      <div><label>Duração (Minutos)</label><input type="number" min="1" value={modalParametro.duracao_degelo ?? ''} onChange={e => setModalParametro({...modalParametro, duracao_degelo: e.target.value})} required /></div>
                     </div>
                   </div>
                 </>
@@ -291,7 +284,7 @@ export default function ParametrosGlobais({
               
               <div className="modal-actions policy-modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setModalParametro({ ...modalParametro, isOpen: false })}>
-                  Abortar Regra
+                  Cancelar Regra
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={isProcessing} style={modalParametro.entidade === 'SETOR' ? { background: 'var(--info)' } : {}}>
                   <Save size={18}/> Consolidar Regra

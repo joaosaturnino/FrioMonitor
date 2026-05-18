@@ -447,7 +447,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  /* Espaço quase nulo entre as notificações */
   pointer-events: none;
 }
 
@@ -458,15 +457,11 @@ body {
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   padding: 6px 10px;
-  /* Extremamente finas */
   border-radius: 4px;
-  /* Bordas mais retas e minúsculas */
   color: var(--text-main);
   font-weight: 600;
   font-size: 0.65rem;
-  /* Fonte tamanho "etiqueta" */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  /* Sombra quase imperceptível */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -476,7 +471,6 @@ body {
   overflow: hidden;
 }
 
-/* Fio de cor indicador */
 .toast::before {
   content: '';
   position: absolute;
@@ -506,7 +500,6 @@ body {
   flex: 1;
   letter-spacing: 0px;
   line-height: 1.1;
-  /* Texto bem compacto */
 }
 
 .toast-close-btn {
@@ -780,7 +773,6 @@ body {
   }
 }
 
-/* TABLET E TELEMÓVEIS (GERAL) */
 @media (max-width: 768px) {
   .desktop-only {
     display: none !important;
@@ -852,7 +844,6 @@ body {
     width: calc(100% - 2rem);
   }
 
-  /* Nano Toasts no Mobile */
   .toast-container {
     bottom: 10px;
     right: 10px;
@@ -887,7 +878,6 @@ body {
   }
 }
 
-/* SMARTPHONES PEQUENOS */
 @media (max-width: 480px) {
   .header {
     padding: 0.75rem 1rem;
@@ -914,4 +904,36 @@ body {
     width: 100%;
     justify-content: center;
   }
+}
+
+/* =========================================
+   9. GLOBAL ANNOUNCEMENT BANNER
+   ========================================= */
+.global-announcement-banner {
+  background: var(--warning);
+  color: #000;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  z-index: 1000;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.global-announcement-banner button {
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  color: #000;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  padding: 4px;
+  transition: background 0.2s;
+}
+
+.global-announcement-banner button:hover {
+  background: rgba(0, 0, 0, 0.2);
 }

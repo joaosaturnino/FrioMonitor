@@ -1,6 +1,6 @@
 /**
- * Servidor Backend - TermoSync Enterprise
- * VERSÃO OTIMIZADA: Gestão eficiente de WebSocket, Redução de Carga, Arquivamento em Massa e Exclusão
+ * Servidor Backend - TermoSync Enterprise (Arquitetura Multi-Tenant SaaS)
+ * Otimizado para alta performance e sincronizado com o Simulador IoT
  */
 
 require('dotenv').config();
@@ -25,47 +25,24 @@ const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost', 
   user: process.env.DB_USER || 'root', 
   password: process.env.DB_PASSWORD || '2409', 
-  database: process.env.DB_NAME || 'friomonitor_db',
+  database: process.env.DB_NAME || 'termosync',
   waitForConnections: true,
   connectionLimit: 20
 });
 
-/* ====================================================
-   WEBSOCKETS: TELEMETRIA, CHAT E CHAMADAS
-   ==================================================== */
 io.on('connection', (socket) => {
-  socket.on('medir_latencia', (timestamp, callback) => {
-    if (typeof callback === 'function') callback(timestamp);
-  });
-
-  socket.on('registrar_usuario', (userId) => {
-    socket.join(`user_${userId}`);
-  });
-
+  socket.on('medir_latencia', (timestamp, callback) => { if (typeof callback === 'function') callback(timestamp); });
+  socket.on('registrar_usuario', (userId) => { socket.join(`user_${userId}`); });
   socket.on('enviar_mensagem_chat', async (data) => {
     try {
-      const remetenteId = data.remetenteId;
-      const remetenteNome = data.remetenteNome;
-      const destinoId = String(data.destinoId);
-      const texto = data.texto;
+      const { remetenteId, remetenteNome, destinoId, texto } = data;
       const dataHora = new Date();
-
-      const [result] = await pool.execute(
-        'INSERT INTO chat_mensagens (remetente_id, remetente_nome, destino_id, texto, data_hora) VALUES (?, ?, ?, ?, ?)',
-        [remetenteId, remetenteNome, destinoId, texto, dataHora]
-      );
-
-      const msgFormatada = { id: result.insertId, remetenteId, remetenteNome, destinoId, texto, data: dataHora, tipo: 'received' };
-
-      if (destinoId === 'todos') { socket.broadcast.emit('nova_mensagem_chat', msgFormatada); } 
+      const [result] = await pool.execute('INSERT INTO chat_mensagens (remetente_id, remetente_nome, destino_id, texto, data_hora) VALUES (?, ?, ?, ?, ?)', [remetenteId, remetenteNome, String(destinoId), texto, dataHora]);
+      const msgFormatada = { id: result.insertId, remetenteId, remetenteNome, destinoId: String(destinoId), texto, data: dataHora, tipo: 'received' };
+      if (String(destinoId) === 'todos') { socket.broadcast.emit('nova_mensagem_chat', msgFormatada); } 
       else { io.to(`user_${destinoId}`).emit('nova_mensagem_chat', msgFormatada); }
-    } catch (err) { console.error('Erro a gravar mensagem:', err.message); }
+    } catch (err) {}
   });
-
-  socket.on('chamada_iniciar', (data) => { io.to(`user_${data.destinoId}`).emit('chamada_recebida', data); });
-  socket.on('chamada_aceita', (data) => { io.to(`user_${data.destinoId}`).emit('chamada_atendida', data); });
-  socket.on('chamada_rejeitada', (data) => { io.to(`user_${data.destinoId}`).emit('chamada_recusada', data); });
-  socket.on('chamada_encerrar', (data) => { io.to(`user_${data.destinoId}`).emit('chamada_terminada', data); });
 });
 
 app.use(cors());
@@ -74,427 +51,371 @@ app.use(express.json({ limit: '50mb' }));
 const SECRET_KEY = process.env.JWT_SECRET || 'chave_super_secreta_termosync_node';
 const PORT = process.env.PORT || 3000;
 
-/* ====================================================
-   AUTO-PATCH E CRIAÇÃO DAS TABELAS
-   ==================================================== */
-async function inicializarMassaDeDados() {
+// 🔥 AUTO-MIGRAÇÃO: Verifica o DB e cria tabelas, colunas e índices sozinhos!
+async function verificarBanco() {
+  // 🚀 NOVO: Tabela de Auditoria de Relatórios Gerenciais (BI)
+    try {
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS sys_relatorios_log (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          data_geracao DATETIME DEFAULT CURRENT_TIMESTAMP,
+          tipo_relatorio VARCHAR(100),
+          formato VARCHAR(10),
+          solicitante VARCHAR(100)
+        )
+      `);
+      console.log('✅ Tabela de Auditoria de Relatórios (BI) operacional!');
+    } catch (e) {
+      console.log('⚠️ Aviso ao criar tabela de relatórios:', e.message);
+    }
   try {
-    await pool.execute(`CREATE TABLE IF NOT EXISTS tecnicos (id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(150) NOT NULL, telefone VARCHAR(50), data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    await pool.execute(`CREATE TABLE IF NOT EXISTS lojas (id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(100) UNIQUE, endereco VARCHAR(255), telefone VARCHAR(50), data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    await pool.execute(`CREATE TABLE IF NOT EXISTS usuarios (id INT AUTO_INCREMENT PRIMARY KEY, usuario VARCHAR(50) UNIQUE NOT NULL, senha VARCHAR(255) NOT NULL, role ENUM('ADMIN', 'MANUTENCAO', 'LOJA') DEFAULT 'LOJA', filial VARCHAR(100), nome_gerente VARCHAR(150) NULL, nome_coordenador VARCHAR(150) NULL, nome_tecnico VARCHAR(150) NULL, tecnico_id INT NULL)`);
-    await pool.execute(`CREATE TABLE IF NOT EXISTS setores (id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(100) UNIQUE NOT NULL)`);
-    await pool.execute(`CREATE TABLE IF NOT EXISTS tipos_refrigeracao (id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(100) UNIQUE NOT NULL)`);
-
-    await pool.execute(`CREATE TABLE IF NOT EXISTS chat_mensagens (id INT AUTO_INCREMENT PRIMARY KEY, remetente_id INT, remetente_nome VARCHAR(150), destino_id VARCHAR(50), texto LONGTEXT, data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    try { await pool.execute('ALTER TABLE chat_mensagens MODIFY texto LONGTEXT'); } catch(e) {}
-
-    try { await pool.execute('ALTER TABLE tipos_refrigeracao ADD COLUMN temp_min DECIMAL(5,2) DEFAULT 0'); } catch(e) {}
-    try { await pool.execute('ALTER TABLE tipos_refrigeracao ADD COLUMN temp_max DECIMAL(5,2) DEFAULT 8'); } catch(e) {}
-    try { await pool.execute('ALTER TABLE tipos_refrigeracao ADD COLUMN umidade_min DECIMAL(5,2) DEFAULT 60'); } catch(e) {}
-    try { await pool.execute('ALTER TABLE tipos_refrigeracao ADD COLUMN umidade_max DECIMAL(5,2) DEFAULT 85'); } catch(e) {}
-    try { await pool.execute('ALTER TABLE tipos_refrigeracao ADD COLUMN intervalo_degelo INT DEFAULT 6'); } catch(e) {}
-    try { await pool.execute('ALTER TABLE tipos_refrigeracao ADD COLUMN duracao_degelo INT DEFAULT 30'); } catch(e) {}
-
-    await pool.execute(`CREATE TABLE IF NOT EXISTS equipamentos (id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(100) NOT NULL, tipo VARCHAR(100), temp_min DECIMAL(5,2), temp_max DECIMAL(5,2), umidade_min DECIMAL(5,2), umidade_max DECIMAL(5,2), motor_ligado BOOLEAN DEFAULT TRUE, intervalo_degelo INT DEFAULT 6, duracao_degelo INT DEFAULT 30, em_degelo BOOLEAN DEFAULT FALSE, setor VARCHAR(100), filial VARCHAR(100), data_calibracao DATE)`);
-    await pool.execute(`CREATE TABLE IF NOT EXISTS leituras (id INT AUTO_INCREMENT PRIMARY KEY, equipamento_id INT, temperatura DECIMAL(5,2), umidade DECIMAL(5,2) DEFAULT 50.0, consumo_kwh DECIMAL(8,2) DEFAULT 0.0, data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (equipamento_id) REFERENCES equipamentos(id) ON DELETE CASCADE)`);
-    await pool.execute(`CREATE TABLE IF NOT EXISTS notificacoes (id INT AUTO_INCREMENT PRIMARY KEY, equipamento_id INT, mensagem VARCHAR(255), tipo_alerta VARCHAR(50), resolvido BOOLEAN DEFAULT FALSE, nota_resolucao TEXT, data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (equipamento_id) REFERENCES equipamentos(id) ON DELETE CASCADE)`);
-    await pool.execute(`CREATE TABLE IF NOT EXISTS chamados (id INT AUTO_INCREMENT PRIMARY KEY, equipamento_id INT, usuario_id INT, tecnico_id INT NULL, filial VARCHAR(100), descricao TEXT, solicitante_nome VARCHAR(150) NULL, tecnico_responsavel VARCHAR(150) NULL, urgencia ENUM('Pendente', 'Baixa', 'Média', 'Alta', 'Crítica') DEFAULT 'Pendente', status ENUM('Aberto', 'Em Atendimento', 'Concluído') DEFAULT 'Aberto', data_abertura TIMESTAMP DEFAULT CURRENT_TIMESTAMP, data_conclusao TIMESTAMP NULL, nota_resolucao TEXT, FOREIGN KEY (equipamento_id) REFERENCES equipamentos(id) ON DELETE CASCADE, FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE)`);
+    await pool.execute('SELECT 1');
+    console.log('✅ Conexão com o Banco de Dados "termosync" verificada.');
     
-    // Coluna para suportar o Arquivamento Manual
-    try { await pool.execute('ALTER TABLE chamados ADD COLUMN arquivado BOOLEAN DEFAULT FALSE'); } catch(e) {}
+    try {
+      await pool.execute(`
+        ALTER TABLE tipos_refrigeracao 
+        ADD COLUMN temp_min DECIMAL(5,2), ADD COLUMN temp_max DECIMAL(5,2), 
+        ADD COLUMN umidade_min DECIMAL(5,2), ADD COLUMN umidade_max DECIMAL(5,2), 
+        ADD COLUMN intervalo_degelo INT DEFAULT 6, ADD COLUMN duracao_degelo INT DEFAULT 30
+      `);
+    } catch (e) {}
 
-  } catch(e) { console.log('Erro ao inicializar tabelas:', e.message); }
+    try {
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS hardware_iot (
+          equipamento_id INT PRIMARY KEY,
+          mac_address VARCHAR(20) DEFAULT '00:00:00:00:00:00',
+          ip_local VARCHAR(15) DEFAULT '0.0.0.0',
+          sinal_wifi INT DEFAULT -100,
+          uptime VARCHAR(50) DEFAULT '0h',
+          firmware_version VARCHAR(20) DEFAULT 'v1.0.0',
+          ultima_comunicacao DATETIME
+        )
+      `);
+      console.log('✅ Tabela de Frota "hardware_iot" operacional!');
+    } catch (e) { console.log('⚠️ Aviso ao criar hardware_iot:', e.message); }
 
-  try { await pool.execute('CREATE INDEX IF NOT EXISTS idx_leituras_eq ON leituras(equipamento_id)'); } catch (e) {}
-  try { await pool.execute('CREATE INDEX IF NOT EXISTS idx_chamados_fil ON chamados(filial)'); } catch (e) {}
+    // 🚀 NOVO: Tabelas de SOC (Ledger Imutável e Zero-Trust)
+    try {
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS audit_logs (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          data_hora DATETIME DEFAULT CURRENT_TIMESTAMP,
+          acao VARCHAR(100),
+          ator VARCHAR(100),
+          alvo VARCHAR(255),
+          severidade VARCHAR(20) DEFAULT 'info'
+        )
+      `);
+      
+      await pool.execute(`
+        CREATE TABLE IF NOT EXISTS sessoes_ativas (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          usuario_id INT,
+          usuario_nome VARCHAR(100),
+          role VARCHAR(50),
+          token VARCHAR(500),
+          ip_address VARCHAR(50),
+          localizacao VARCHAR(100) DEFAULT 'Desconhecida',
+          data_login DATETIME DEFAULT CURRENT_TIMESTAMP,
+          revogado BOOLEAN DEFAULT FALSE,
+          INDEX idx_token (token(255))
+        )
+      `);
+      console.log('✅ Tabelas de Auditoria (SOC) operacionais!');
+    } catch (e) { console.log('⚠️ Aviso ao criar tabelas SOC:', e.message); }
 
-  try {
-    const defaultPassword = await bcrypt.hash('123456', 10);
-    const [adminMasterCheck] = await pool.execute('SELECT id FROM usuarios WHERE usuario = "admin_master"');
-    if (adminMasterCheck.length === 0) { await pool.execute('INSERT INTO usuarios (usuario, senha, role, filial) VALUES (?, ?, ?, ?)', ['admin_master', defaultPassword, 'ADMIN', 'Todas']); }
-
-    const [checkSetores] = await pool.execute('SELECT id FROM setores LIMIT 1');
-    if (checkSetores.length === 0) {
-      const defaultSetores = ['Açougue', 'Congelados', 'FLV', 'Frios e Laticínios', 'Farmácia / Vacinas', 'Bebidas'];
-      for (let s of defaultSetores) await pool.execute('INSERT IGNORE INTO setores (nome) VALUES (?)', [s]);
-    }
-
-    const [checkTipos] = await pool.execute('SELECT id FROM tipos_refrigeracao LIMIT 1');
-    if (checkTipos.length === 0) {
-      const defaultTipos = [{ n: 'Câmara Frigorífica', tMin: 0, tMax: 8, uMin: 60, uMax: 85, iD: 6, dD: 30 }, { n: 'Ilha Congelados', tMin: -24, tMax: -18, uMin: 60, uMax: 80, iD: 6, dD: 30 }];
-      for (let t of defaultTipos) await pool.execute('INSERT IGNORE INTO tipos_refrigeracao (nome, temp_min, temp_max, umidade_min, umidade_max, intervalo_degelo, duracao_degelo) VALUES (?, ?, ?, ?, ?, ?, ?)', [t.n, t.tMin, t.tMax, t.uMin, t.uMax, t.iD, t.dD]);
-    }
-  } catch (err) {}
+    try {
+      await pool.execute('CREATE INDEX idx_equip_data ON leituras(equipamento_id, data_hora)');
+      await pool.execute('CREATE INDEX idx_data_hora ON leituras(data_hora)');
+    } catch (e) {}
+    
+  } catch(e) { 
+    console.log('❌ Erro Crítico: Banco de dados não encontrado ou offline.', e.message); 
+  }
 }
-inicializarMassaDeDados();
+verificarBanco();
 
-/* --- MIDDLEWARE DE AUTENTICAÇÃO --- */
-const verificarToken = (req, res, next) => {
+// 🔥 MOTOR DE AUDITORIA GERAL (Acesso interno)
+async function registrarAuditoria(acao, ator, alvo, severidade = 'info') {
+  try {
+    await pool.execute(
+      'INSERT INTO audit_logs (acao, ator, alvo, severidade) VALUES (?, ?, ?, ?)',
+      [acao, ator, alvo, severidade]
+    );
+  } catch (e) { console.error('Erro de Audit Log:', e.message); }
+}
+
+// 🔥 MIDDLEWARE ZERO-TRUST ATUALIZADO (Verifica Kill Switch)
+const verificarToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   if (!authHeader) return res.status(403).json({ error: 'Acesso negado.' });
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-  jwt.verify(token, SECRET_KEY, (err, decoded) => {
-    if (err) return res.status(401).json({ error: 'Token inválido.' });
-    req.userId = decoded.id; req.userRole = decoded.role; req.userFilial = decoded.filial; next();
+  
+  jwt.verify(token, SECRET_KEY, async (err, decoded) => {
+    if (err) return res.status(401).json({ error: 'Token inválido ou expirado.' });
+    
+    // Verifica se a sessão foi morta no SOC
+    try {
+      const [sessoes] = await pool.execute('SELECT revogado FROM sessoes_ativas WHERE token = ?', [token]);
+      if (sessoes.length > 0 && sessoes[0].revogado) {
+        return res.status(401).json({ error: 'SESSÃO REVOGADA PELO ADMINISTRADOR.' });
+      }
+    } catch(e) {}
+
+    req.userId = decoded.id; req.userRole = decoded.role; req.userFilial = decoded.filial; req.userEmpresa = decoded.empresa || 'Cliente Alpha (Padrão)'; 
+    next();
   });
 };
 
-/* ====================================================
-   ROTAS DE AUTENTICAÇÃO E UTILIZADORES
-   ==================================================== */
-app.post('/api/login', async (req, res) => {
-  const { usuario, senha } = req.body;
-  const [users] = await pool.execute('SELECT * FROM usuarios WHERE usuario = ?', [usuario]);
-  if (users.length === 0) return res.status(401).json({ error: 'Utilizador não encontrado' });
-  const senhaValida = await bcrypt.compare(senha, users[0].senha);
-  if (!senhaValida) return res.status(401).json({ error: 'Palavra-passe incorreta' });
+/* --- ROTAS BÁSICAS MANTIDAS --- */
+app.get('/api/empresas', verificarToken, async (req, res) => { if (req.userRole !== 'DEV') return res.status(403).send(); try { const [r] = await pool.execute('SELECT * FROM empresas ORDER BY nome ASC'); res.json(r); } catch (e) { res.status(500).send(); } });
+app.post('/api/empresas', verificarToken, async (req, res) => { if (req.userRole !== 'DEV') return res.status(403).send(); try { await pool.execute('INSERT INTO empresas (nome, cnpj, contato, email, status) VALUES (?, ?, ?, ?, ?)', [req.body.nome, req.body.cnpj || null, req.body.contato || null, req.body.email || null, req.body.status || 'Ativa']); res.status(201).send(); } catch (e) { res.status(500).send(); } });
+app.put('/api/empresas/:id', verificarToken, async (req, res) => { if (req.userRole !== 'DEV') return res.status(403).send(); try { await pool.execute('UPDATE empresas SET nome=?, cnpj=?, contato=?, email=?, status=? WHERE id=?', [req.body.nome, req.body.cnpj, req.body.contato, req.body.email, req.body.status, req.params.id]); res.status(200).send(); } catch (e) { res.status(500).send(); } });
+
+app.post('/api/impersonate', verificarToken, async (req, res) => { 
+  if (req.userRole !== 'DEV') return res.status(403).json({ error: 'Permissão negada. Apenas Root.' }); 
+  let empresaDestino = 'Cliente Alpha (Padrão)'; 
+  const [lojas] = await pool.execute('SELECT empresa FROM loja WHERE nome = ? LIMIT 1', [req.body.filialDestino]); 
+  if (lojas.length > 0 && lojas[0].empresa) { empresaDestino = lojas[0].empresa; } 
+  else { const [eqs] = await pool.execute('SELECT empresa FROM equipamentos WHERE filial = ? LIMIT 1', [req.body.filialDestino]); if (eqs.length > 0 && eqs[0].empresa) empresaDestino = eqs[0].empresa; } 
   
-  const token = jwt.sign({ id: users[0].id, role: users[0].role, filial: users[0].filial }, SECRET_KEY, { expiresIn: '12h' });
-  res.json({ token, id: users[0].id, role: users[0].role, filial: users[0].filial, nome_gerente: users[0].nome_gerente, nome_coordenador: users[0].nome_coordenador, nome_tecnico: users[0].nome_tecnico });
+  registrarAuditoria('IMPERSONATE', 'Root/Dev', `Acesso remoto a: ${req.body.filialDestino}`, 'warning');
+  res.json({ token: jwt.sign({ id: 9999, role: 'ADMIN', filial: 'Todas', empresa: empresaDestino }, SECRET_KEY, { expiresIn: '1h' }), empresa: empresaDestino }); 
 });
 
-app.get('/api/usuarios', verificarToken, async (req, res) => { 
-  // CORREÇÃO: Permitir ADMIN e DEV lerem a lista
-  if(req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); 
+// 🔥 ROTA DE LOGIN ATUALIZADA COM AUDITORIA E SESSÕES
+app.post('/api/login', async (req, res) => { 
+  const { usuario, senha } = req.body; 
+  const [users] = await pool.execute('SELECT * FROM usuarios WHERE usuario = ?', [usuario]); 
   
-  const [r] = await pool.execute('SELECT id, usuario, role, filial, nome_gerente, nome_coordenador, nome_tecnico FROM usuarios ORDER BY role ASC'); 
-  res.json(r); 
-});
+  const ip = req.ip || req.socket?.remoteAddress || 'Desconhecido';
 
-app.post('/api/usuarios', verificarToken, async (req, res) => {
-  if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).json({ error: 'Acesso restrito.' });
-  try {
-    const { usuario, senha, role, filial, nome_gerente, nome_coordenador, nome_tecnico } = req.body;
-    const hash = await bcrypt.hash(senha, 10);
-    await pool.execute(
-      'INSERT INTO usuarios (usuario, senha, role, filial, nome_gerente, nome_coordenador, nome_tecnico) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [usuario, hash, role, filial, nome_gerente || null, nome_coordenador || null, nome_tecnico || null]
-    );
-    res.status(201).send();
-  } catch (error) { res.status(500).json({ error: 'Erro ao criar utilizador.' }); }
-});
-
-app.put('/api/usuarios/:id', verificarToken, async (req, res) => {
-  if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).json({ error: 'Acesso restrito.' });
-  try {
-    const { usuario, senha, role, filial, nome_gerente, nome_coordenador, nome_tecnico } = req.body;
-    const userId = req.params.id;
-
-    if (senha && senha.trim() !== '') {
-      const hash = await bcrypt.hash(senha, 10);
-      await pool.execute(
-        'UPDATE usuarios SET usuario=?, senha=?, role=?, filial=?, nome_gerente=?, nome_coordenador=?, nome_tecnico=? WHERE id=?',
-        [usuario, hash, role, filial, nome_gerente || null, nome_coordenador || null, nome_tecnico || null, userId]
-      );
-    } else {
-      await pool.execute(
-        'UPDATE usuarios SET usuario=?, role=?, filial=?, nome_gerente=?, nome_coordenador=?, nome_tecnico=? WHERE id=?',
-        [usuario, role, filial, nome_gerente || null, nome_coordenador || null, nome_tecnico || null, userId]
-      );
-    }
-    res.send();
-  } catch (error) { res.status(500).json({ error: 'Erro ao atualizar o utilizador.' }); }
-});
-
-app.delete('/api/usuarios/:id', verificarToken, async (req, res) => {
-  if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).json({ error: 'Acesso restrito.' });
-  try {
-    if (String(req.userId) === String(req.params.id)) return res.status(400).json({ error: 'Não é possível remover a sua própria conta.' });
-    await pool.execute('DELETE FROM usuarios WHERE id=?', [req.params.id]);
-    res.send();
-  } catch (error) { res.status(500).json({ error: 'Erro ao remover o utilizador.' }); }
-});
-
-/* ====================================================
-   ROTAS DE LOJAS
-   ==================================================== */
-app.get('/api/lojas', verificarToken, async (req, res) => { 
-  // CORREÇÃO: Permitir ADMIN e DEV lerem a lista de lojas
-  if(req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); 
-  try { 
-    const query = `
-      SELECT 
-        l.*,
-        (SELECT nome_gerente FROM usuarios WHERE filial = l.nome AND nome_gerente IS NOT NULL LIMIT 1) AS nome_gerente,
-        (SELECT nome_coordenador FROM usuarios WHERE filial = l.nome AND nome_coordenador IS NOT NULL LIMIT 1) AS nome_coordenador
-      FROM lojas l 
-      ORDER BY l.nome ASC
-    `;
-    const [r] = await pool.execute(query); 
-    res.json(r); 
-  } catch (e) { res.status(500).send(); } 
-});app.get('/api/usuarios', verificarToken, async (req, res) => { 
-  // CORREÇÃO: Permitir ADMIN e DEV lerem a lista
-  if(req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); 
-  
-  const [r] = await pool.execute('SELECT id, usuario, role, filial, nome_gerente, nome_coordenador, nome_tecnico FROM usuarios ORDER BY role ASC'); 
-  res.json(r); 
-});
-
-app.post('/api/usuarios', verificarToken, async (req, res) => {
-  if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).json({ error: 'Acesso restrito.' });
-  try {
-    const { usuario, senha, role, filial, nome_gerente, nome_coordenador, nome_tecnico } = req.body;
-    const hash = await bcrypt.hash(senha, 10);
-    await pool.execute(
-      'INSERT INTO usuarios (usuario, senha, role, filial, nome_gerente, nome_coordenador, nome_tecnico) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [usuario, hash, role, filial, nome_gerente || null, nome_coordenador || null, nome_tecnico || null]
-    );
-    res.status(201).send();
-  } catch (error) { res.status(500).json({ error: 'Erro ao criar utilizador.' }); }
-});
-
-app.put('/api/usuarios/:id', verificarToken, async (req, res) => {
-  if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).json({ error: 'Acesso restrito.' });
-  try {
-    const { usuario, senha, role, filial, nome_gerente, nome_coordenador, nome_tecnico } = req.body;
-    const userId = req.params.id;
-
-    if (senha && senha.trim() !== '') {
-      const hash = await bcrypt.hash(senha, 10);
-      await pool.execute(
-        'UPDATE usuarios SET usuario=?, senha=?, role=?, filial=?, nome_gerente=?, nome_coordenador=?, nome_tecnico=? WHERE id=?',
-        [usuario, hash, role, filial, nome_gerente || null, nome_coordenador || null, nome_tecnico || null, userId]
-      );
-    } else {
-      await pool.execute(
-        'UPDATE usuarios SET usuario=?, role=?, filial=?, nome_gerente=?, nome_coordenador=?, nome_tecnico=? WHERE id=?',
-        [usuario, role, filial, nome_gerente || null, nome_coordenador || null, nome_tecnico || null, userId]
-      );
-    }
-    res.send();
-  } catch (error) { res.status(500).json({ error: 'Erro ao atualizar o utilizador.' }); }
-});
-
-app.delete('/api/usuarios/:id', verificarToken, async (req, res) => {
-  if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).json({ error: 'Acesso restrito.' });
-  try {
-    if (String(req.userId) === String(req.params.id)) return res.status(400).json({ error: 'Não é possível remover a sua própria conta.' });
-    await pool.execute('DELETE FROM usuarios WHERE id=?', [req.params.id]);
-    res.send();
-  } catch (error) { res.status(500).json({ error: 'Erro ao remover o utilizador.' }); }
-});
-
-/* ====================================================
-   ROTAS DE LOJAS
-   ==================================================== */
-app.get('/api/lojas', verificarToken, async (req, res) => { 
-  // CORREÇÃO: Permitir ADMIN e DEV lerem a lista de lojas
-  if(req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); 
-  try { 
-    const query = `
-      SELECT 
-        l.*,
-        (SELECT nome_gerente FROM usuarios WHERE filial = l.nome AND nome_gerente IS NOT NULL LIMIT 1) AS nome_gerente,
-        (SELECT nome_coordenador FROM usuarios WHERE filial = l.nome AND nome_coordenador IS NOT NULL LIMIT 1) AS nome_coordenador
-      FROM lojas l 
-      ORDER BY l.nome ASC
-    `;
-    const [r] = await pool.execute(query); 
-    res.json(r); 
-  } catch (e) { res.status(500).send(); } 
-});
-
-/* ====================================================
-   ROTAS DE EQUIPAMENTOS
-   ==================================================== */
-app.get('/api/equipamentos', verificarToken, async (req, res) => { 
-  let q = `SELECT e.*, (SELECT temperatura FROM leituras WHERE equipamento_id = e.id ORDER BY data_hora DESC LIMIT 1) AS ultima_temp, (SELECT umidade FROM leituras WHERE equipamento_id = e.id ORDER BY data_hora DESC LIMIT 1) AS ultima_umidade FROM equipamentos e`; 
-  const p = []; 
-  if (req.userRole === 'LOJA') { q += ' WHERE e.filial = ?'; p.push(req.userFilial); } 
-  const [r] = await pool.execute(q, p); 
-  res.json(r); 
-});
-
-app.post('/api/equipamentos', verificarToken, async (req, res) => {
-  try {
-    const { nome, tipo, temp_min, temp_max, umidade_min, umidade_max, intervalo_degelo, duracao_degelo, setor, filial, data_calibracao } = req.body;
-    await pool.execute(
-      `INSERT INTO equipamentos (nome, tipo, temp_min, temp_max, umidade_min, umidade_max, intervalo_degelo, duracao_degelo, setor, filial, data_calibracao) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [nome, tipo, temp_min, temp_max, umidade_min || null, umidade_max || null, intervalo_degelo || 6, duracao_degelo || 30, setor, filial, data_calibracao || null]
-    );
-    io.emit('atualizacao_dados');
-    res.status(201).send();
-  } catch (error) { res.status(500).json({ error: 'Erro ao inserir o equipamento.' }); }
-});
-
-app.put('/api/equipamentos/:id/edit', verificarToken, async (req, res) => {
-  try {
-    const { nome, tipo, temp_min, temp_max, umidade_min, umidade_max, intervalo_degelo, duracao_degelo, setor, filial, data_calibracao } = req.body;
-    await pool.execute(
-      `UPDATE equipamentos SET nome=?, tipo=?, temp_min=?, temp_max=?, umidade_min=?, umidade_max=?, intervalo_degelo=?, duracao_degelo=?, setor=?, filial=?, data_calibracao=? WHERE id=?`,
-      [nome, tipo, temp_min, temp_max, umidade_min || null, umidade_max || null, intervalo_degelo || 6, duracao_degelo || 30, setor, filial, data_calibracao || null, req.params.id]
-    );
-    io.emit('atualizacao_dados');
-    res.send();
-  } catch (error) { res.status(500).json({ error: 'Erro ao editar o equipamento.' }); }
-});
-
-app.delete('/api/equipamentos/:id', verificarToken, async (req, res) => {
-  if (req.userRole !== 'ADMIN') return res.status(403).send();
-  try {
-    await pool.execute('DELETE FROM equipamentos WHERE id=?', [req.params.id]);
-    io.emit('atualizacao_dados');
-    res.send();
-  } catch (error) { res.status(500).send(); }
-});
-
-/* ====================================================
-   ROTAS DE CHAMADOS TÉCNICOS
-   ==================================================== */
-app.get('/api/chamados', verificarToken, async (req, res) => { 
-  let q = `SELECT c.*, e.nome as equipamento_nome, u.usuario as aberto_por FROM chamados c JOIN equipamentos e ON c.equipamento_id = e.id JOIN usuarios u ON c.usuario_id = u.id`; 
-  const p = []; 
-  if (req.userRole === 'LOJA') { q += ` WHERE c.filial = ?`; p.push(req.userFilial); } 
-  q += ` ORDER BY c.data_abertura DESC`; 
-  const [r] = await pool.execute(q, p); 
-  res.json(r); 
-});
-
-app.post('/api/chamados', verificarToken, async (req, res) => {
-  try {
-    const { equipamento_id, descricao, solicitante_nome, tecnico_responsavel } = req.body;
-    const [eq] = await pool.execute('SELECT filial FROM equipamentos WHERE id=?', [equipamento_id]);
-    if (eq.length === 0) return res.status(404).json({ error: 'Equipamento não encontrado.' });
-    
-    await pool.execute(
-      `INSERT INTO chamados (equipamento_id, usuario_id, filial, descricao, solicitante_nome, tecnico_responsavel) VALUES (?, ?, ?, ?, ?, ?)`,
-      [equipamento_id, req.userId, eq[0].filial, descricao, solicitante_nome || null, tecnico_responsavel || null]
-    );
-    io.emit('atualizacao_dados');
-    res.status(201).send();
-  } catch (error) { res.status(500).json({ error: 'Erro ao abrir chamado.' }); }
-});
-
-app.put('/api/chamados/:id/status', verificarToken, async (req, res) => {
-  try {
-    const { status, nota_resolucao } = req.body;
-    await pool.execute(`UPDATE chamados SET status=?, nota_resolucao=?, data_conclusao=NOW() WHERE id=?`, [status, nota_resolucao, req.params.id]);
-    io.emit('atualizacao_dados');
-    res.send();
-  } catch (error) { res.status(500).send(); }
-});
-
-app.put('/api/chamados/:id/urgencia', verificarToken, async (req, res) => {
-  if (req.userRole !== 'ADMIN') return res.status(403).send();
-  try {
-    await pool.execute('UPDATE chamados SET urgencia=? WHERE id=?', [req.body.urgencia, req.params.id]);
-    io.emit('atualizacao_dados');
-    res.send();
-  } catch (error) { res.status(500).send(); }
-});
-
-app.put('/api/chamados/:id/arquivar', verificarToken, async (req, res) => {
-  try {
-    await pool.execute('UPDATE chamados SET arquivado=TRUE WHERE id=?', [req.params.id]);
-    io.emit('atualizacao_dados');
-    res.send();
-  } catch (error) { res.status(500).json({ error: 'Erro ao arquivar chamado.' }); }
-});
-
-app.put('/api/chamados/arquivar-todos', verificarToken, async (req, res) => {
-  try {
-    if (req.userRole === 'ADMIN' || req.userRole === 'MANUTENCAO') {
-      await pool.execute("UPDATE chamados SET arquivado=TRUE WHERE status='Concluído' AND arquivado=FALSE");
-    } else {
-      await pool.execute("UPDATE chamados SET arquivado=TRUE WHERE status='Concluído' AND arquivado=FALSE AND filial=?", [req.userFilial]);
-    }
-    
-    io.emit('atualizacao_dados');
-    res.send();
-  } catch (error) { 
-    res.status(500).json({ error: 'Erro ao arquivar chamados em massa.' }); 
+  if (users.length === 0) {
+    registrarAuditoria('LOGIN_FAILED', 'Desconhecido', `Tentativa com usuário: ${usuario} (${ip})`, 'danger');
+    return res.status(401).json({ error: 'Usuário não encontrado' }); 
   }
-});
-
-// 🟢 ROTA: EXCLUIR DEFINITIVAMENTE DO BANCO DE DADOS
-app.delete('/api/chamados/arquivados', verificarToken, async (req, res) => {
-  try {
-    if (req.userRole !== 'ADMIN') {
-      return res.status(403).json({ error: 'Permissão negada. Apenas administradores podem excluir.' });
-    }
-
-    const [resultado] = await pool.execute("DELETE FROM chamados WHERE status = 'Concluído'");
-    
-    io.emit('atualizacao_dados'); 
-    res.json({ message: 'Histórico excluído com sucesso.', linhasAfetadas: resultado.affectedRows });
-  } catch (error) { 
-    res.status(500).json({ error: 'Erro ao excluir chamados do banco.' }); 
+  
+  const senhaValida = await bcrypt.compare(senha, users[0].senha); 
+  if (!senhaValida) {
+    registrarAuditoria('LOGIN_FAILED', usuario, `Senha Incorreta (${ip})`, 'danger');
+    return res.status(401).json({ error: 'Senha incorreta' }); 
   }
+  
+  const token = jwt.sign({ id: users[0].id, role: users[0].role, filial: users[0].filial, empresa: users[0].empresa }, SECRET_KEY, { expiresIn: '12h' });
+  
+  // Guardar a sessão Zero-Trust
+  await pool.execute(
+    'INSERT INTO sessoes_ativas (usuario_id, usuario_nome, role, token, ip_address) VALUES (?, ?, ?, ?, ?)',
+    [users[0].id, usuario, users[0].role, token, ip]
+  );
+  
+  registrarAuditoria('LOGIN_SUCCESS', usuario, `Autenticação bem-sucedida (${ip})`, 'success');
+
+  res.json({ token, id: users[0].id, role: users[0].role, filial: users[0].filial, nome_gerente: users[0].nome_gerente, nome_coordenador: users[0].nome_coordenador, nome_tecnico: users[0].nome_tecnico }); 
 });
 
-/* ====================================================
-   ROTAS AUXILIARES E TELEMETRIA
-   ==================================================== */
-app.get('/api/contatos', verificarToken, async (req, res) => {
+app.put('/api/usuarios/reset-senha', async (req, res) => { try { const { usuario, novaSenha } = req.body; if (!usuario || !novaSenha) { return res.status(400).json({ error: 'Dados incompletos.' }); } const [users] = await pool.execute('SELECT id FROM usuarios WHERE usuario = ?', [usuario]); if (users.length === 0) { return res.status(404).json({ error: 'Usuário não encontrado no sistema.' }); } await pool.execute('UPDATE usuarios SET senha = ? WHERE usuario = ?', [await bcrypt.hash(novaSenha, 10), usuario]); res.status(200).json({ message: 'Credenciais atualizadas com sucesso.' }); } catch (error) { res.status(500).json({ error: 'Erro interno ao redefinir a senha.' }); } });
+app.get('/api/usuarios', verificarToken, async (req, res) => { if(req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); let q = 'SELECT id, usuario, role, filial, nome_gerente, nome_coordenador, nome_tecnico, empresa FROM usuarios WHERE 1=1'; let p = []; if (req.userRole !== 'DEV') { q += ' AND empresa = ?'; p.push(req.userEmpresa); } const [r] = await pool.execute(q + ' ORDER BY role ASC', p); res.json(r); });
+app.post('/api/usuarios', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).json({ error: 'Acesso restrito.' }); try { const { usuario, senha, role, filial, nome_gerente, nome_coordenador, nome_tecnico, empresa } = req.body; await pool.execute('INSERT INTO usuarios (usuario, senha, role, filial, nome_gerente, nome_coordenador, nome_tecnico, empresa) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [usuario, await bcrypt.hash(senha, 10), role, filial || null, nome_gerente || null, nome_coordenador || null, nome_tecnico || null, (req.userRole === 'DEV' && empresa) ? empresa : req.userEmpresa]); res.status(201).send(); } catch (error) { res.status(500).json({ error: 'Erro ao criar usuário.' }); } });
+app.put('/api/usuarios/:id', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).json({ error: 'Acesso restrito.' }); try { const { usuario, role, filial, nome_gerente, nome_coordenador, nome_tecnico, empresa, senha } = req.body; const empresaTarget = (req.userRole === 'DEV' && empresa) ? empresa : req.userEmpresa; if (senha) { await pool.execute('UPDATE usuarios SET usuario=?, senha=?, role=?, filial=?, nome_gerente=?, nome_coordenador=?, nome_tecnico=?, empresa=? WHERE id=?', [usuario, await bcrypt.hash(senha, 10), role, filial || null, nome_gerente || null, nome_coordenador || null, nome_tecnico || null, empresaTarget, req.params.id]); } else { await pool.execute('UPDATE usuarios SET usuario=?, role=?, filial=?, nome_gerente=?, nome_coordenador=?, nome_tecnico=?, empresa=? WHERE id=?', [usuario, role, filial || null, nome_gerente || null, nome_coordenador || null, nome_tecnico || null, empresaTarget, req.params.id]); } res.status(200).send(); } catch (error) { res.status(500).json({ error: 'Erro ao editar usuário.' }); } });
+app.delete('/api/usuarios/:id', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).json({ error: 'Acesso restrito.' }); try { await pool.execute('DELETE FROM usuarios WHERE id=?', [req.params.id]); res.status(200).send(); } catch (error) { res.status(500).json({ error: 'Erro ao excluir usuário.' }); } });
+app.get('/api/lojas', verificarToken, async (req, res) => { if(req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); try { let q = `SELECT * FROM loja WHERE 1=1`; let p = []; if (req.userRole !== 'DEV') { q += ' AND empresa = ?'; p.push(req.userEmpresa); } const [lojas] = await pool.execute(q + ' ORDER BY nome ASC', p); const [usuarios] = await pool.execute('SELECT filial, nome_gerente, nome_coordenador FROM usuarios'); res.json(lojas.map(l => { const uGerente = usuarios.find(user => user.filial === l.nome && user.nome_gerente); const uCoord = usuarios.find(user => user.filial === l.nome && user.nome_coordenador); return { ...l, nome_gerente: uGerente ? uGerente.nome_gerente : null, nome_coordenador: uCoord ? uCoord.nome_coordenador : null }; })); } catch (e) { res.status(500).json({ error: e.message }); } });
+app.post('/api/lojas', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); try { await pool.execute('INSERT INTO loja (nome, endereco, telefone, empresa, status) VALUES (?, ?, ?, ?, ?)', [req.body.nome, req.body.endereco, req.body.telefone, req.userRole === 'DEV' && req.body.empresa ? req.body.empresa : req.userEmpresa, req.userRole === 'DEV' && req.body.status ? req.body.status : 'Ativa']); res.status(201).send(); } catch (error) { res.status(500).send(); } });
+app.put('/api/lojas/:id', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); try { if (req.userRole === 'DEV') { await pool.execute('UPDATE loja SET nome=?, endereco=?, telefone=?, empresa=?, status=? WHERE id=?', [req.body.nome, req.body.endereco, req.body.telefone, req.body.empresa || req.userEmpresa, req.body.status || 'Ativa', req.params.id]); } else { await pool.execute('UPDATE loja SET nome=?, endereco=?, telefone=? WHERE id=? AND empresa=?', [req.body.nome, req.body.endereco, req.body.telefone, req.params.id, req.userEmpresa]); } res.status(200).send(); } catch (error) { res.status(500).send(); } });
+app.get('/api/equipamentos', verificarToken, async (req, res) => { let q = `SELECT e.*, (SELECT temperatura FROM leituras WHERE equipamento_id = e.id ORDER BY data_hora DESC LIMIT 1) AS ultima_temp, (SELECT umidade FROM leituras WHERE equipamento_id = e.id ORDER BY data_hora DESC LIMIT 1) AS ultima_umidade FROM equipamentos e WHERE 1=1`; const p = []; if (req.userRole !== 'DEV') { q += ' AND e.empresa = ?'; p.push(req.userEmpresa); if (req.userRole === 'LOJA') { q += ' AND e.filial = ?'; p.push(req.userFilial); } } const [r] = await pool.execute(q, p); res.json(r); });
+app.post('/api/equipamentos', verificarToken, async (req, res) => { try { const { nome, tipo, temp_min, temp_max, umidade_min, umidade_max, intervalo_degelo, duracao_degelo, setor, filial, data_calibracao } = req.body; await pool.execute('INSERT INTO equipamentos (nome, tipo, temp_min, temp_max, umidade_min, umidade_max, intervalo_degelo, duracao_degelo, setor, filial, data_calibracao, empresa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nome, tipo, temp_min, temp_max, umidade_min || null, umidade_max || null, intervalo_degelo, duracao_degelo, setor, filial, data_calibracao || null, req.userEmpresa]); res.status(201).send(); } catch (error) { res.status(500).send(); } });
+app.put('/api/equipamentos/:id/edit', verificarToken, async (req, res) => { try { await pool.execute('UPDATE equipamentos SET nome=?, tipo=?, temp_min=?, temp_max=?, umidade_min=?, umidade_max=?, intervalo_degelo=?, duracao_degelo=?, setor=?, filial=?, data_calibracao=? WHERE id=? AND empresa=?', [req.body.nome, req.body.tipo, req.body.temp_min, req.body.temp_max, req.body.umidade_min || null, req.body.umidade_max || null, req.body.intervalo_degelo, req.body.duracao_degelo, req.body.setor, req.body.filial, req.body.data_calibracao || null, req.params.id, req.userEmpresa]); res.status(200).send(); } catch (error) { res.status(500).send(); } });
+app.delete('/api/equipamentos/:id', verificarToken, async (req, res) => { try { await pool.execute('DELETE FROM equipamentos WHERE id=? AND empresa=?', [req.params.id, req.userEmpresa]); res.status(200).send(); } catch (error) { res.status(500).send(); } });
+app.get('/api/chamados', verificarToken, async (req, res) => { let q = `SELECT c.*, e.nome as equipamento_nome, u.usuario as aberto_por FROM chamados c JOIN equipamentos e ON c.equipamento_id = e.id JOIN usuarios u ON c.usuario_id = u.id WHERE 1=1`; const p = []; if (req.userRole !== 'DEV') { q += ' AND c.empresa = ?'; p.push(req.userEmpresa); if (req.userRole === 'LOJA') { q += ` AND c.filial = ?`; p.push(req.userFilial); } } const [r] = await pool.execute(q + ' ORDER BY c.data_abertura DESC', p); res.json(r); });
+app.post('/api/chamados', verificarToken, async (req, res) => { try { const { equipamento_id, descricao, solicitante_nome, tecnico_responsavel } = req.body; const [eq] = await pool.execute('SELECT filial FROM equipamentos WHERE id=?', [equipamento_id]); await pool.execute(`INSERT INTO chamados (equipamento_id, usuario_id, filial, descricao, solicitante_nome, tecnico_responsavel, empresa) VALUES (?, ?, ?, ?, ?, ?, ?)`, [equipamento_id, req.userId, eq[0].filial, descricao, solicitante_nome || null, tecnico_responsavel || null, req.userEmpresa]); io.emit('atualizacao_dados'); res.status(201).send(); } catch (error) { res.status(500).send(); } });
+app.put('/api/chamados/:id', verificarToken, async (req, res) => { try { const [atual] = await pool.execute('SELECT * FROM chamados WHERE id=?', [req.params.id]); if (atual.length === 0) return res.status(404).send(); const chamado = atual[0]; const novoStatus = req.body.status !== undefined ? req.body.status : chamado.status; let query = 'UPDATE chamados SET status=?, nota_resolucao=?, arquivado=?, urgencia=?, tecnico_responsavel=?'; if (novoStatus === 'Concluído' && chamado.status !== 'Concluído') query += ', data_conclusao=CURRENT_TIMESTAMP'; query += ' WHERE id=?'; await pool.execute(query, [novoStatus, req.body.nota_resolucao !== undefined ? req.body.nota_resolucao : chamado.nota_resolucao, req.body.arquivado !== undefined ? (req.body.arquivado ? 1 : 0) : chamado.arquivado, req.body.urgencia !== undefined ? req.body.urgencia : chamado.urgencia, req.body.tecnico_responsavel !== undefined ? req.body.tecnico_responsavel : chamado.tecnico_responsavel, req.params.id]); io.emit('atualizacao_dados'); res.status(200).send(); } catch (error) { res.status(500).send(); } });
+app.put('/api/chamados/:id/status', verificarToken, async (req, res) => { try { const [atual] = await pool.execute('SELECT status, nota_resolucao, arquivado FROM chamados WHERE id=?', [req.params.id]); if (atual.length === 0) return res.status(404).send(); await pool.execute('UPDATE chamados SET status=?, nota_resolucao=?, arquivado=?, data_conclusao=CURRENT_TIMESTAMP WHERE id=?', [req.body.status !== undefined ? req.body.status : atual[0].status, req.body.nota_resolucao !== undefined ? req.body.nota_resolucao : atual[0].nota_resolucao, req.body.arquivado !== undefined ? (req.body.arquivado ? 1 : 0) : atual[0].arquivado, req.params.id]); io.emit('atualizacao_dados'); res.status(200).send(); } catch (error) { res.status(500).send(); } });
+app.put('/api/chamados/:id/arquivar', verificarToken, async (req, res) => { try { await pool.execute('UPDATE chamados SET arquivado=1, data_conclusao=CURRENT_TIMESTAMP WHERE id=?', [req.params.id]); io.emit('atualizacao_dados'); res.status(200).send(); } catch (error) { res.status(500).send(); } });
+app.put('/api/chamados/:id/urgencia', verificarToken, async (req, res) => { try { await pool.execute('UPDATE chamados SET urgencia=? WHERE id=?', [req.body.urgencia, req.params.id]); io.emit('atualizacao_dados'); res.status(200).send(); } catch (error) { res.status(500).send(); } });
+app.delete('/api/chamados/:id', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); try { await pool.execute('DELETE FROM chamados WHERE id=?', [req.params.id]); io.emit('atualizacao_dados'); res.status(200).send(); } catch (error) { res.status(500).send(); } });
+app.get('/api/notificacoes', verificarToken, async (req, res) => { let q = `SELECT n.*, e.nome AS equipamento_nome, e.setor, e.filial FROM notificacoes n JOIN equipamentos e ON n.equipamento_id = e.id WHERE n.resolvido = FALSE`; const p = []; if (req.userRole !== 'DEV') { q += ' AND e.empresa = ?'; p.push(req.userEmpresa); } if (req.userRole === 'LOJA') { q += ` AND e.filial = ?`; p.push(req.userFilial); } const [r] = await pool.execute(q + ' ORDER BY n.data_hora DESC', p); res.json(r); });
+app.get('/api/notificacoes/historico', verificarToken, async (req, res) => { let q = `SELECT n.*, e.nome AS equipamento_nome, e.setor, e.filial FROM notificacoes n JOIN equipamentos e ON n.equipamento_id = e.id WHERE n.resolvido = TRUE`; const p = []; if (req.userRole !== 'DEV') { q += ' AND e.empresa = ?'; p.push(req.userEmpresa); } if (req.userRole === 'LOJA') { q += ` AND e.filial = ?`; p.push(req.userFilial); } const [r] = await pool.execute(q + ' ORDER BY n.data_hora DESC LIMIT 150', p); res.json(r); });
+app.put('/api/notificacoes/:id/resolver', verificarToken, async (req, res) => { try { await pool.execute('UPDATE notificacoes SET resolvido=TRUE, nota_resolucao=? WHERE id=?', [req.body.nota_resolucao || 'Resolvido pelo operador.', req.params.id]); io.emit('atualizacao_dados'); res.status(200).send(); } catch (error) { res.status(500).send(); } });
+app.put('/api/notificacoes/resolver-todas', verificarToken, async (req, res) => { try { let q = 'UPDATE notificacoes n JOIN equipamentos e ON n.equipamento_id = e.id SET n.resolvido=TRUE, n.nota_resolucao="Limpeza em Lote" WHERE n.resolvido=FALSE'; let p = []; if (req.userRole !== 'DEV') { q += ' AND e.empresa = ?'; p.push(req.userEmpresa); if (req.userRole === 'LOJA') { q += ' AND e.filial = ?'; p.push(req.userFilial); } } await pool.execute(q, p); io.emit('atualizacao_dados'); res.status(200).send(); } catch (error) { res.status(500).send(); } });
+app.get('/api/relatorios', verificarToken, async (req, res) => { let q = `SELECT l.id, l.temperatura, l.umidade, l.consumo_kwh, l.data_hora, e.nome, e.setor, e.filial FROM leituras l JOIN equipamentos e ON l.equipamento_id = e.id WHERE 1=1`; const p = []; if (req.userRole !== 'DEV') { q += ' AND e.empresa = ?'; p.push(req.userEmpresa); } if (req.userRole === 'LOJA') { q += ' AND e.filial = ?'; p.push(req.userFilial); } if (req.query.data_inicio && req.query.data_fim) { q += ' AND l.data_hora BETWEEN ? AND ?'; p.push(new Date(req.query.data_inicio), new Date(req.query.data_fim)); } else { q += ' AND l.data_hora >= DATE_SUB(NOW(), INTERVAL 6 HOUR)'; } const [r] = await pool.execute(q + ' ORDER BY l.data_hora ASC LIMIT 3000', p); res.json(r); });
+app.get('/api/auxiliares/filiais', verificarToken, async (req, res) => { try { let q1 = 'SELECT DISTINCT nome AS filial FROM loja WHERE 1=1'; let q2 = 'SELECT DISTINCT filial FROM equipamentos WHERE filial IS NOT NULL'; let p = []; if (req.userRole !== 'DEV') { q1 += ' AND empresa = ?'; q2 += ' AND empresa = ?'; p.push(req.userEmpresa); } const [r1] = await pool.execute(q1, req.userRole !== 'DEV' ? [req.userEmpresa] : []); const [r2] = await pool.execute(q2, req.userRole !== 'DEV' ? [req.userEmpresa] : []); res.json(Array.from(new Set([...r1.map(x => x.filial), ...r2.map(x => x.filial)])).sort()); } catch (e) { res.status(500).send(); } });
+app.get('/api/contatos', verificarToken, async (req, res) => { try { let q = 'SELECT id, usuario, role, filial, nome_gerente, nome_coordenador, nome_tecnico FROM usuarios WHERE id != ?'; let p = [req.userId]; if (req.userRole !== 'DEV') { q += ' AND empresa = ?'; p.push(req.userEmpresa); } const [rows] = await pool.execute(q, p); res.json(rows.map(u => { let nome = u.usuario; let cargo = 'Usuário'; if (u.role === 'ADMIN' || u.role === 'DEV') { nome = 'Administração'; cargo = 'Suporte Master'; } else if (u.role === 'MANUTENCAO') { nome = u.nome_tecnico || u.usuario; cargo = 'Técnico Manutenção'; } else if (u.role === 'LOJA') { if (u.nome_gerente) { nome = u.nome_gerente; cargo = `Gerente - ${u.filial}`; } else if (u.nome_coordenador) { nome = u.nome_coordenador; cargo = `Coordenador - ${u.filial}`; } else { nome = `Equipe ${u.filial}`; cargo = 'Operador Loja'; } } return { id: u.id, nome, cargo, role: u.role, filial: u.filial }; })); } catch (error) { res.status(500).json({ error: error.message }); } });
+app.get('/api/chat/historico', verificarToken, async (req, res) => { try { const [r] = await pool.execute('SELECT * FROM chat_mensagens ORDER BY data_hora ASC LIMIT 150'); res.json(r); } catch (e) { res.status(500).send(); } });
+app.get('/api/tecnicos', verificarToken, async (req, res) => { try { const [r] = await pool.execute('SELECT id, usuario, nome_tecnico FROM usuarios WHERE role = "MANUTENCAO" AND nome_tecnico IS NOT NULL ORDER BY nome_tecnico ASC'); res.json(r); } catch (e) { res.status(500).send(); } });
+app.get('/api/setores', verificarToken, async (req, res) => { try { const [r] = await pool.execute('SELECT id, nome FROM setores ORDER BY nome ASC'); res.json(r); } catch (e) { res.status(500).send(); } });
+app.post('/api/setores', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); try { await pool.execute('INSERT INTO setores (nome) VALUES (?)', [req.body.nome]); res.status(201).send(); } catch (e) { res.status(500).send(); } });
+app.put('/api/setores/:id', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); try { await pool.execute('UPDATE setores SET nome=? WHERE id=?', [req.body.nome, req.params.id]); res.status(200).send(); } catch (e) { res.status(500).send(); } });
+app.delete('/api/setores/:id', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); try { await pool.execute('DELETE FROM setores WHERE id=?', [req.params.id]); res.status(200).send(); } catch (e) { res.status(500).send(); } });
+app.get('/api/tipos-refrigeracao', verificarToken, async (req, res) => { try { const [r] = await pool.execute('SELECT * FROM tipos_refrigeracao ORDER BY nome ASC'); res.json(r); } catch (e) { res.status(500).send(); } });
+app.post('/api/tipos-refrigeracao', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); try { const { nome, temp_min, temp_max, umidade_min, umidade_max, intervalo_degelo, duracao_degelo } = req.body; const parseNum = (v) => (v === '' || v === undefined || v === null) ? null : parseFloat(v); await pool.execute('INSERT INTO tipos_refrigeracao (nome, temp_min, temp_max, umidade_min, umidade_max, intervalo_degelo, duracao_degelo) VALUES (?, ?, ?, ?, ?, ?, ?)', [nome, parseNum(temp_min), parseNum(temp_max), parseNum(umidade_min), parseNum(umidade_max), parseNum(intervalo_degelo) || 6, parseNum(duracao_degelo) || 30]); res.status(201).send(); } catch (e) { res.status(500).send(); } });
+app.put('/api/tipos-refrigeracao/:id', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); try { const { nome, temp_min, temp_max, umidade_min, umidade_max, intervalo_degelo, duracao_degelo } = req.body; const parseNum = (v) => (v === '' || v === undefined || v === null) ? null : parseFloat(v); await pool.execute('UPDATE tipos_refrigeracao SET nome=?, temp_min=?, temp_max=?, umidade_min=?, umidade_max=?, intervalo_degelo=?, duracao_degelo=? WHERE id=?', [nome, parseNum(temp_min), parseNum(temp_max), parseNum(umidade_min), parseNum(umidade_max), parseNum(intervalo_degelo) || 6, parseNum(duracao_degelo) || 30, req.params.id]); res.status(200).send(); } catch (e) { res.status(500).send(); } });
+app.delete('/api/tipos-refrigeracao/:id', verificarToken, async (req, res) => { if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); try { await pool.execute('DELETE FROM tipos_refrigeracao WHERE id=?', [req.params.id]); res.status(200).send(); } catch (e) { res.status(500).send(); } });
+
+app.get('/api/hardware', verificarToken, async (req, res) => {
+  if (req.userRole !== 'DEV') return res.status(403).send();
   try {
-    const [rows] = await pool.execute('SELECT id, usuario, role, filial, nome_gerente, nome_coordenador, nome_tecnico FROM usuarios WHERE id != ?', [req.userId]);
-    const contatos = rows.map(u => {
-      let nome = u.usuario; let cargo = 'Utilizador';
-      if (u.role === 'ADMIN') { nome = 'Administração'; cargo = 'Suporte Master'; }
-      else if (u.role === 'MANUTENCAO') { nome = u.nome_tecnico || u.usuario; cargo = 'Técnico Manutenção'; }
-      else if (u.role === 'LOJA') {
-        if (u.nome_gerente) { nome = u.nome_gerente; cargo = `Gerente - ${u.filial}`; }
-        else if (u.nome_coordenador) { nome = u.nome_coordenador; cargo = `Coordenador - ${u.filial}`; }
-        else { nome = `Equipa ${u.filial}`; cargo = 'Operador Loja'; }
-      }
-      return { id: u.id, nome, cargo, role: u.role, filial: u.filial };
-    });
-    res.json(contatos);
-  } catch (error) { res.status(500).json({ error: error.message }); }
+    const [r] = await pool.execute(`
+      SELECT e.id, e.nome, e.filial, e.motor_ligado, e.em_degelo,
+             h.mac_address AS mac, h.ip_local AS ip, h.sinal_wifi AS signal_dbm, 
+             h.uptime, h.firmware_version AS fwVersion, h.ultima_comunicacao
+      FROM equipamentos e
+      LEFT JOIN hardware_iot h ON e.id = h.equipamento_id
+    `);
+    res.json(r);
+  } catch(e) { res.status(500).send(); }
 });
-
-app.get('/api/chat/historico', verificarToken, async (req, res) => {
-  try {
-    const [rows] = await pool.execute(`SELECT * FROM chat_mensagens WHERE remetente_id = ? OR destino_id = ? OR destino_id = 'todos' ORDER BY data_hora ASC LIMIT 1000`, [req.userId, String(req.userId)]);
-    const historico = rows.map(r => ({ id: r.id, remetenteId: r.remetente_id, remetenteNome: r.remetente_nome, destinoId: r.destino_id, texto: r.texto, data: r.data_hora, tipo: r.remetente_id === req.userId ? 'sent' : 'received' }));
-    res.json(historico);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/setores', verificarToken, async (req, res) => { try { const [r] = await pool.execute('SELECT id, nome FROM setores ORDER BY nome ASC'); res.json(r); } catch (e) { res.status(500).json({ error: e.message }); } });
-app.get('/api/tipos-refrigeracao', verificarToken, async (req, res) => { try { const [r] = await pool.execute('SELECT * FROM tipos_refrigeracao ORDER BY nome ASC'); res.json(r); } catch (e) { res.status(500).json({ error: e.message }); } });
-app.get('/api/tecnicos', verificarToken, async (req, res) => { try { const [r] = await pool.execute('SELECT id, usuario, nome_tecnico FROM usuarios WHERE role = "MANUTENCAO" AND nome_tecnico IS NOT NULL ORDER BY nome_tecnico ASC'); res.json(r); } catch (e) { res.status(500).json({ error: e.message }); } });
-app.get('/api/auxiliares/filiais', verificarToken, async (req, res) => { try { const [r] = await pool.execute('SELECT nome AS filial FROM lojas ORDER BY nome ASC'); if(r.length>0) return res.json(r.map(x=>x.filial)); const [f] = await pool.execute(`SELECT DISTINCT filial FROM equipamentos WHERE filial IS NOT NULL`); res.json(f.map(x=>x.filial)); } catch (e) { res.status(500).send(); } });
-
-app.get('/api/notificacoes', verificarToken, async (req, res) => { let q = `SELECT n.*, e.nome AS equipamento_nome, e.setor, e.filial FROM notificacoes n JOIN equipamentos e ON n.equipamento_id = e.id WHERE n.resolvido = FALSE`; const p = []; if (req.userRole === 'LOJA') { q += ` AND e.filial = ?`; p.push(req.userFilial); } q += ` ORDER BY n.data_hora DESC`; const [r] = await pool.execute(q, p); res.json(r); });
-app.get('/api/notificacoes/historico', verificarToken, async (req, res) => { let q = `SELECT n.*, e.nome AS equipamento_nome, e.setor, e.filial FROM notificacoes n JOIN equipamentos e ON n.equipamento_id = e.id WHERE n.resolvido = TRUE`; const p = []; if (req.userRole === 'LOJA') { q += ` AND e.filial = ?`; p.push(req.userFilial); } q += ` ORDER BY n.data_hora DESC LIMIT 150`; const [r] = await pool.execute(q, p); res.json(r); });
-app.put('/api/notificacoes/resolver-todas', verificarToken, async (req, res) => { if (req.userRole === 'ADMIN' || req.userRole === 'MANUTENCAO') { await pool.execute('UPDATE notificacoes SET resolvido=TRUE, nota_resolucao=?', ['Limpeza Global']); } else { await pool.execute(`UPDATE notificacoes n JOIN equipamentos e ON n.equipamento_id = e.id SET n.resolvido=TRUE, n.nota_resolucao=? WHERE n.resolvido=FALSE AND e.filial=?`, ['Verificado', req.userFilial]); } io.emit('atualizacao_dados'); res.send(); });
-app.put('/api/notificacoes/:id/resolver', verificarToken, async (req, res) => { await pool.execute('UPDATE notificacoes SET resolvido=TRUE, nota_resolucao=? WHERE id=?', [req.body.nota_resolucao||'Verificado', req.params.id]); io.emit('atualizacao_dados'); res.send(); });
-
-app.get('/api/relatorios', verificarToken, async (req, res) => { let q = `SELECT l.id, l.temperatura, l.umidade, l.consumo_kwh, l.data_hora, e.nome, e.setor, e.filial FROM leituras l JOIN equipamentos e ON l.equipamento_id = e.id WHERE 1=1`; const p = []; if (req.userRole === 'LOJA') { q += ' AND e.filial = ?'; p.push(req.userFilial); } if (req.query.data_inicio && req.query.data_fim) { q += ' AND l.data_hora BETWEEN ? AND ?'; p.push(new Date(req.query.data_inicio), new Date(req.query.data_fim)); } else { q += ' AND l.data_hora >= DATE_SUB(NOW(), INTERVAL 6 HOUR)'; } q += ' ORDER BY l.data_hora ASC LIMIT 3000'; const [r] = await pool.execute(q, p); res.json(r); });
 
 app.post('/api/leituras', verificarToken, async (req, res) => {
   try {
-    const { equipamento_id, temperatura, umidade, alerta_forçado, consumo_kwh, motor_ligado, em_degelo } = req.body;
+    const { 
+      equipamento_id, temperatura, umidade, alerta_forcado, consumo_kwh, 
+      motor_ligado, em_degelo, 
+      mac_address, ip_local, sinal_wifi, uptime, firmware_version
+    } = req.body;
+    
     const t = parseFloat(temperatura); const u = parseFloat(umidade || 50.0); const c_kwh = parseFloat(consumo_kwh || 0.0);
+    
+    try {
+      await pool.execute(`
+        INSERT INTO hardware_iot (equipamento_id, mac_address, ip_local, sinal_wifi, uptime, firmware_version, ultima_comunicacao)
+        VALUES (?, ?, ?, ?, ?, ?, NOW())
+        ON DUPLICATE KEY UPDATE 
+        ip_local = VALUES(ip_local), sinal_wifi = VALUES(sinal_wifi), uptime = VALUES(uptime), ultima_comunicacao = NOW()
+      `, [
+        equipamento_id, 
+        mac_address || 'A4:CF:12:XX:XX:XX', 
+        ip_local || '192.168.1.100', 
+        sinal_wifi ? parseInt(sinal_wifi) : -65, 
+        uptime || '0h', 
+        firmware_version || 'v1.0.0'
+      ]);
+    } catch (e) {
+      console.log('Aviso (Hardware IoT):', e.message);
+    }
+
     const [r] = await pool.execute('INSERT INTO leituras (equipamento_id, temperatura, umidade, consumo_kwh) VALUES (?, ?, ?, ?)', [equipamento_id, t, u, c_kwh]);
     const [eq] = await pool.execute('SELECT temp_max, temp_min, umidade_min, umidade_max, nome, em_degelo, motor_ligado, setor, filial FROM equipamentos WHERE id = ?', [equipamento_id]);
 
     if (eq.length > 0) {
-      const isMotorLigado = (motor_ligado == 1 || motor_ligado === true);
+      const isMotorLigado = (motor_ligado == 1 || motor_ligado === true); 
       const isEmDegelo = (em_degelo == 1 || em_degelo === true);
       await pool.execute('UPDATE equipamentos SET motor_ligado=?, em_degelo=? WHERE id=?', [isMotorLigado, isEmDegelo, equipamento_id]);
       
-      let notif = false;
-      const tMax = parseFloat(eq[0].temp_max); const tMin = parseFloat(eq[0].temp_min);
+      const tMax = parseFloat(eq[0].temp_max); 
+      const tMin = parseFloat(eq[0].temp_min);
+      const uMax = parseFloat(eq[0].umidade_max || 0);
+      const uMin = parseFloat(eq[0].umidade_min || 0);
+      
+      let novosAlertas = [];
+      let resolvidoAutomatico = false;
 
-      if (alerta_forçado === 'REDE') { const [a] = await pool.execute('SELECT id FROM notificacoes WHERE equipamento_id=? AND resolvido=FALSE AND tipo_alerta=?', [equipamento_id, 'REDE']); if (a.length===0) { await pool.execute('INSERT INTO notificacoes (equipamento_id, mensagem, tipo_alerta) VALUES (?, ?, ?)', [equipamento_id, `FALHA COMUNICAÇÃO: Sensor IoT offline em "${eq[0].nome}".`, 'REDE']); notif = true; } } else if (alerta_forçado !== 'REDE') { await pool.execute('UPDATE notificacoes SET resolvido=TRUE, nota_resolucao="Sinal restabelecido." WHERE equipamento_id=? AND resolvido=FALSE AND tipo_alerta=?', [equipamento_id, 'REDE']); }
-      if (alerta_forçado === 'PORTA_ABERTA' && !isEmDegelo) { const [a] = await pool.execute('SELECT id FROM notificacoes WHERE equipamento_id=? AND resolvido=FALSE AND tipo_alerta=?', [equipamento_id, 'PORTA']); if (a.length===0) { await pool.execute('INSERT INTO notificacoes (equipamento_id, mensagem, tipo_alerta) VALUES (?, ?, ?)', [equipamento_id, `ANOMALIA: A porta de "${eq[0].nome}" está aberta!`, 'PORTA']); notif = true; } } else if (alerta_forçado !== 'PORTA_ABERTA') { await pool.execute('UPDATE notificacoes SET resolvido=TRUE, nota_resolucao="Porta fechada." WHERE equipamento_id=? AND resolvido=FALSE AND tipo_alerta=?', [equipamento_id, 'PORTA']); }
-      if (!isMotorLigado && !isEmDegelo) { const [a] = await pool.execute('SELECT id FROM notificacoes WHERE equipamento_id=? AND resolvido=FALSE AND tipo_alerta=?', [equipamento_id, 'MECANICA']); if (a.length === 0) { await pool.execute('INSERT INTO notificacoes (equipamento_id, mensagem, tipo_alerta) VALUES (?, ?, ?)', [equipamento_id, `PARADA: ${eq[0].nome} parou inesperadamente!`, 'MECANICA']); notif = true; } } else if (isMotorLigado) { await pool.execute('UPDATE notificacoes SET resolvido=TRUE, nota_resolucao="Motor religado." WHERE equipamento_id=? AND resolvido=FALSE AND tipo_alerta=?', [equipamento_id, 'MECANICA']); }
-      if ((t > tMax || t < tMin) && !isEmDegelo) { const [a] = await pool.execute('SELECT id FROM notificacoes WHERE equipamento_id=? AND resolvido=FALSE AND tipo_alerta=?', [equipamento_id, 'TEMPERATURA']); if (a.length===0) { await pool.execute('INSERT INTO notificacoes (equipamento_id, mensagem, tipo_alerta) VALUES (?, ?, ?)', [equipamento_id, `EXCURSÃO: ${eq[0].nome} fora da faixa térmica.`, 'TEMPERATURA']); notif = true; } } else if (t >= tMin && t <= tMax) { await pool.execute('UPDATE notificacoes SET resolvido=TRUE, nota_resolucao="Temperatura estabilizada." WHERE equipamento_id=? AND resolvido=FALSE AND tipo_alerta=?', [equipamento_id, 'TEMPERATURA']); }
+      const checkAndAlert = async (condicaoAnomala, tipoAlerta, mensagem, isSilencioso = false) => {
+        if (condicaoAnomala) {
+          const [existe] = await pool.execute('SELECT id FROM notificacoes WHERE equipamento_id=? AND resolvido=FALSE AND tipo_alerta=?', [equipamento_id, tipoAlerta]);
+          if (existe.length === 0) {
+            const [inserido] = await pool.execute('INSERT INTO notificacoes (equipamento_id, mensagem, tipo_alerta) VALUES (?, ?, ?)', [equipamento_id, mensagem, tipoAlerta]);
+            novosAlertas.push({ id: inserido.insertId, equipamento_id, mensagem, tipo_alerta: tipoAlerta, data_hora: new Date().toISOString(), resolvido: 0, equipamento_nome: eq[0].nome, setor: eq[0].setor, filial: eq[0].filial, silencioso: isSilencioso });
+          }
+        } else {
+          const [upd] = await pool.execute('UPDATE notificacoes SET resolvido=TRUE, nota_resolucao="Normalizado automaticamente." WHERE equipamento_id=? AND resolvido=FALSE AND tipo_alerta=?', [equipamento_id, tipoAlerta]);
+          if (upd.affectedRows > 0) resolvidoAutomatico = true;
+        }
+      };
 
-      if (notif) {
-          setTimeout(() => { io.emit('atualizacao_dados'); }, 500);
-          enviarAlertaWhatsApp(`🚨 ALERTA: Anomalia detetada no equipamento *${eq[0].nome}*. Verifica o painel central.`, eq[0].filial);
+      await checkAndAlert(alerta_forcado === 'REDE', 'REDE', `FALHA IoT/REDE: Sensor offline em "${eq[0].nome}".`);
+      await checkAndAlert(alerta_forcado === 'PORTA_ABERTA', 'PORTA', `PORTA ABERTA: O equipamento "${eq[0].nome}" está com a porta violada!`);
+      await checkAndAlert(!isMotorLigado && !isEmDegelo && alerta_forcado !== 'REDE', 'MECANICA', `MOTOR PARADO: O compressor de "${eq[0].nome}" desligou subitamente!`);
+      await checkAndAlert((t > tMax || t < tMin) && !isEmDegelo, 'TEMPERATURA', `ALERTA TÉRMICO: "${eq[0].nome}" fora da faixa configurada (${t}°C).`);
+      
+      if (uMax > 0 || uMin > 0) {
+        await checkAndAlert((u > uMax || u < uMin) && !isEmDegelo, 'UMIDADE', `ALERTA HIGROMÉTRICO: Umidade de "${eq[0].nome}" fora dos limites permitidos (${u}%).`);
       }
+      
+      await checkAndAlert(isEmDegelo, 'DEGELO', `INFO: "${eq[0].nome}" entrou em ciclo de Degelo programado.`, true);
 
+      if (novosAlertas.length > 0 || resolvidoAutomatico) { io.emit('atualizacao_dados'); }
+
+      if (novosAlertas.length > 0) {
+        novosAlertas.forEach(alertaObj => {
+          if (!alertaObj.silencioso) { enviarAlertaWhatsApp(`🚨 ALERTA NOC em *${eq[0].nome}*. Motivo: ${alertaObj.mensagem}`, eq[0].filial); }
+          io.emit('novo_alerta', alertaObj);
+        });
+      }
+      
       io.emit('nova_leitura', { id: r.insertId, equipamento_id, temperatura: t, umidade: u, consumo_kwh: c_kwh, motor_ligado: isMotorLigado, em_degelo: isEmDegelo, data_hora: new Date(), nome: eq[0].nome, setor: eq[0].setor, filial: eq[0].filial });
     }
     res.status(201).send();
   } catch (error) { res.status(500).send(); }
 });
 
-server.listen(PORT, '0.0.0.0', () => { 
-  console.log(`Backend online na porta ${PORT}.`); 
+app.get('/api/system/health', verificarToken, async (req, res) => {
+  if (req.userRole !== 'DEV') return res.status(403).send();
+  try {
+    const [rows] = await pool.execute('SELECT COUNT(*) as total FROM leituras');
+    res.json({
+      db: 'ONLINE',
+      sockets: io.engine.clientsCount,
+      total_records: rows[0].total,
+      uptime: process.uptime()
+    });
+  } catch (e) { res.status(500).send(); }
 });
+
+app.post('/api/system/purge', verificarToken, async (req, res) => {
+  if (req.userRole !== 'DEV') return res.status(403).send();
+  const { dias } = req.body;
+  try {
+    const [resPurge] = await pool.execute(`DELETE FROM leituras WHERE data_hora < DATE_SUB(NOW(), INTERVAL ? DAY)`, [dias]);
+    registrarAuditoria('DB_PURGE', 'Root/Dev', `Limpeza da tabela de leituras (> ${dias} dias)`, 'danger');
+    res.json({ deleted: resPurge.affectedRows });
+  } catch (e) { res.status(500).send(); }
+});
+
+// ==========================================
+// ROTAS DO SOC (SECURITY OPERATIONS CENTER)
+// ==========================================
+app.get('/api/soc/sessoes', verificarToken, async (req, res) => {
+  if (req.userRole !== 'DEV') return res.status(403).send();
+  try {
+    const [sessoes] = await pool.execute('SELECT id, usuario_nome as usuario, role, ip_address as ip, localizacao as location, data_login as loginTime FROM sessoes_ativas WHERE revogado = FALSE ORDER BY data_login DESC');
+    res.json(sessoes);
+  } catch (e) { res.status(500).send(); }
+});
+
+app.post('/api/soc/revogar/:id', verificarToken, async (req, res) => {
+  if (req.userRole !== 'DEV') return res.status(403).send();
+  try {
+    const [sessao] = await pool.execute('SELECT usuario_nome FROM sessoes_ativas WHERE id = ?', [req.params.id]);
+    await pool.execute('UPDATE sessoes_ativas SET revogado = TRUE WHERE id = ?', [req.params.id]);
+    
+    const alvo = sessao.length > 0 ? sessao[0].usuario_nome : 'ID '+req.params.id;
+    registrarAuditoria('TOKEN_REVOKED', 'root_dev', alvo, 'danger');
+    
+    res.json({ success: true });
+  } catch (e) { res.status(500).send(); }
+});
+
+app.get('/api/soc/auditoria', verificarToken, async (req, res) => {
+  if (req.userRole !== 'DEV') return res.status(403).send();
+  try {
+    const [logs] = await pool.execute('SELECT data_hora, acao as action, ator as actor, alvo as target, severidade as severity FROM audit_logs ORDER BY data_hora DESC LIMIT 100');
+    res.json(logs);
+  } catch (e) { res.status(500).send(); }
+});
+
+// Rota para registrar a geração de um relatório executivo
+app.post('/api/system/reports/log', verificarToken, async (req, res) => {
+  if (req.userRole !== 'DEV') return res.status(403).send();
+  try {
+    const { tipo, formato, solicitante } = req.body;
+    await pool.execute(
+      'INSERT INTO sys_relatorios_log (tipo_relatorio, formato, solicitante) VALUES (?, ?, ?)',
+      [tipo, formato, solicitante]
+    );
+    res.status(201).send();
+  } catch (e) { res.status(500).send(); }
+});
+
+server.listen(PORT, '0.0.0.0', () => { console.log(`Backend online na porta ${PORT}. Motor Multi-Tenant SaaS Ativo.`); });

@@ -41,17 +41,17 @@ export default function Chat({
   const quickReplies = [
     "Estou no local 📍",
     "Anomalia resolvida ✅",
-    "A aguardar aprovação ⏳",
-    "Liguem-me urgente 📞",
+    "Aguardando aprovação ⏳",
+    "Me liguem urgente 📞",
     "Preciso de apoio tático 🆘"
   ];
 
   // Comandos de Terminal
   const slashCommands = [
-    { cmd: '/status', label: 'Solicitar Ponto de Situação', icon: Activity, output: '[SYSTEM_REQ] Por favor, forneça o ponto de situação atualizado da intervenção.' },
-    { cmd: '/loc', label: 'Pedir Coordenadas Exatas', icon: Navigation, output: '[SYSTEM_REQ] Transmita a sua localização GPS exata ou corredor de atuação.' },
+    { cmd: '/status', label: 'Solicitar Status da Situação', icon: Activity, output: '[SYSTEM_REQ] Por favor, forneça o status atualizado da intervenção.' },
+    { cmd: '/loc', label: 'Pedir Coordenadas Exatas', icon: Navigation, output: '[SYSTEM_REQ] Transmita sua localização GPS exata ou corredor de atuação.' },
     { cmd: '/alerta', label: 'Emitir Alerta Prioritário', icon: ShieldAlert, output: '⚠️ [ALERTA PRIORITÁRIO] Interrompa a operação atual e responda a este canal de imediato.' },
-    { cmd: '/wa-bridge', label: 'Forçar Sincronização WhatsApp', icon: MessageCircle, output: '[SYSTEM] 🟢 Gateway WhatsApp ativado. Os próximos alertas críticos serão reencaminhados para o terminal móvel.' }
+    { cmd: '/wa-bridge', label: 'Forçar Sincronização WhatsApp', icon: MessageCircle, output: '[SYSTEM] 🟢 Gateway WhatsApp ativado. Os próximos alertas críticos serão encaminhados para o celular.' }
   ];
 
   const callIntervalRef = useRef(null);
@@ -62,7 +62,7 @@ export default function Chat({
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  // --- CONTROLO DO INPUT E COMANDOS ---
+  // --- CONTROLE DO INPUT E COMANDOS ---
   const handleInputChange = (e) => {
     const val = e.target.value;
     setMensagem(val);
@@ -88,7 +88,7 @@ export default function Chat({
   const canalGlobal = {
     id: 'todos',
     nome: 'Broadcast Global (NOC)',
-    cargo: 'Toda a Equipa TermoSync',
+    cargo: 'Toda a Equipe TermoSync',
     isGroup: true
   };
 
@@ -160,7 +160,7 @@ export default function Chat({
     setShowEmojiPicker(false);
   };
   
-  // --- LÓGICA DE FICHEIROS E ÁUDIO ---
+  // --- LÓGICA DE ARQUIVOS E ÁUDIO ---
   const processFile = (file) => {
     if (!file) return;
     const reader = new FileReader();
@@ -194,7 +194,7 @@ export default function Chat({
       mediaRecorderRef.current = recorder;
       setIsRecording(true); setRecordTime(0); setShowEmojiPicker(false); setShowCommands(false);
       recordIntervalRef.current = setInterval(() => setRecordTime(prev => prev + 1), 1000);
-    } catch (err) { alert('Permissão de microfone negada. Verifique as definições do telemóvel/browser.'); }
+    } catch (err) { alert('Permissão de microfone negada. Verifique as configurações do celular/navegador.'); }
   };
 
   const pararEEnviarGravacao = () => {
@@ -234,7 +234,7 @@ export default function Chat({
 
     if (textoBruto.startsWith('[FILE:')) {
       const metaEnd = textoBruto.indexOf(']');
-      if (metaEnd === -1) return "Ficheiro inválido";
+      if (metaEnd === -1) return "Arquivo inválido";
       const metaInfo = textoBruto.substring(6, metaEnd).split('|');
       const fileName = metaInfo[0]; const fileType = metaInfo[1] || ''; const src = textoBruto.substring(metaEnd + 1);
 
@@ -262,7 +262,7 @@ export default function Chat({
       else if (repliedContent.startsWith('[FILE:')) repliedContent = '📎 Documento Anexo';
       return (
         <>
-          <div className="msg-reply-block"><strong>A responder a:</strong><p>{repliedContent}</p></div>
+          <div className="msg-reply-block"><strong>Respondendo a:</strong><p>{repliedContent}</p></div>
           {repMatch[2]}
         </>
       );
@@ -286,7 +286,7 @@ export default function Chat({
       {isDragging && contatoAtivo && (
         <div className="chat-drag-overlay">
           <div className="drag-content">
-            <UploadCloud size={64} /><h2>Transmitir Ficheiro</h2><p>Largar para enviar a {contatoAtivo.nome}</p>
+            <UploadCloud size={64} /><h2>Transmitir Arquivo</h2><p>Solte para enviar para {contatoAtivo.nome}</p>
           </div>
         </div>
       )}
@@ -303,7 +303,7 @@ export default function Chat({
         <div className="chat-search-header">
           <div className="chat-search-box">
             <Search size={18} color="var(--text-muted)" />
-            <input type="text" placeholder="Procurar agente de terreno..." value={pesquisa} onChange={(e) => setPesquisa(e.target.value)} />
+            <input type="text" placeholder="Pesquisar agente de campo..." value={pesquisa} onChange={(e) => setPesquisa(e.target.value)} />
           </div>
         </div>
         
@@ -357,7 +357,7 @@ export default function Chat({
               {showSearchChat ? (
                 <div className="chat-header-search-box anim-fade-in">
                   <Search size={18} color="var(--text-muted)" style={{marginRight: '8px'}}/>
-                  <input type="text" placeholder="Procurar registo de log..." value={searchChat} onChange={e => setSearchChat(e.target.value)} autoFocus />
+                  <input type="text" placeholder="Pesquisar registro de log..." value={searchChat} onChange={e => setSearchChat(e.target.value)} autoFocus />
                   <X size={20} color="var(--text-muted)" style={{cursor: 'pointer'}} onClick={() => {setShowSearchChat(false); setSearchChat('');}} />
                 </div>
               ) : (
@@ -373,7 +373,7 @@ export default function Chat({
                   </div>
                   <div className="chat-user-header-details">
                     <h3>{contatoAtivo.nome}</h3>
-                    {isTyping && !contatoAtivo.isGroup ? <span className="chat-status-typing">A encriptar transmissão...</span> : <span className="chat-status-online"><span className="chat-status-dot"></span> Link Seguro Estabelecido</span>}
+                    {isTyping && !contatoAtivo.isGroup ? <span className="chat-status-typing">Criptografando transmissão...</span> : <span className="chat-status-online"><span className="chat-status-dot"></span> Link Seguro Estabelecido</span>}
                   </div>
                 </div>
               )}
@@ -399,7 +399,7 @@ export default function Chat({
                     <Shield size={40} className="secure-icon pulse-soft" />
                     <p>
                       Comunicação ponto-a-ponto estabelecida.<br/>
-                      Todos os pacotes de dados partilhados nesta frequência são auditados e confidenciais.
+                      Todos os pacotes de dados compartilhados nesta frequência são auditados e confidenciais.
                     </p>
                   </div>
                 )}
@@ -428,7 +428,7 @@ export default function Chat({
                       
                       <div className={`msg-wrapper ${msg.tipo}`}>
                         <div className="msg-hover-actions">
-                          <button type="button" className="msg-action-btn" onClick={() => encaminharParaWhatsApp(msg.texto)} title="Reencaminhar para WhatsApp"><MessageCircle size={16} /></button>
+                          <button type="button" className="msg-action-btn" onClick={() => encaminharParaWhatsApp(msg.texto)} title="Encaminhar para WhatsApp"><MessageCircle size={16} /></button>
                           <button type="button" className="msg-action-btn" onClick={() => setResponderA(msg)}><Reply size={16} /></button>
                           <button type="button" className="msg-action-btn text-danger" onClick={() => apagarMensagemLocal(msg.id)}><Trash2 size={16} /></button>
                         </div>
@@ -439,7 +439,7 @@ export default function Chat({
                         
                         {mostrarHora && (
                           <span className="msg-meta">
-                            {new Date(msg.data).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(msg.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                             {msg.tipo === 'sent' && <CheckCheck size={14} className="read-ticks" />}
                           </span>
                         )}
@@ -458,7 +458,7 @@ export default function Chat({
                 <div className="ptt-tactical-bar anim-slide-up">
                   <div className="ptt-status">
                     <span className="ptt-dot"></span>
-                    <strong className="desktop-only-inline">TRANSMISSÃO ACTIVA</strong>
+                    <strong className="desktop-only-inline">TRANSMISSÃO ATIVA</strong>
                     <span className="ptt-timer">{Math.floor(recordTime / 60)}:{String(recordTime % 60).padStart(2, '0')}</span>
                   </div>
                   
@@ -496,7 +496,7 @@ export default function Chat({
                   {responderA && (
                     <div className="reply-context-box">
                       <div className="reply-info">
-                        <strong>A responder a {responderA.remetenteNome.split(' ')[0]}</strong>
+                        <strong>Respondendo a {responderA.remetenteNome.split(' ')[0]}</strong>
                         <p>{responderA.texto.replace(/\[AUDIO\].*/, '🎤 Áudio').replace(/\[FILE:.*?\].*/, '📎 Anexo').replace(/\[REP:.*?\]\s*/, '')}</p>
                       </div>
                       <button type="button" className="btn-close-reply" onClick={() => setResponderA(null)}><X size={18} /></button>
@@ -532,7 +532,7 @@ export default function Chat({
           <div className="chat-empty-state">
             <div className="chat-empty-icon-wrapper"><Shield size={56} color="var(--primary)" /></div>
             <h3>Central de Transmissão Tática</h3>
-            <p>A aguardar seleção de agente na grelha lateral para<br/>iniciar protocolo de comunicação segura.</p>
+            <p>Aguardando seleção de agente na lista lateral para<br/>iniciar protocolo de comunicação segura.</p>
           </div>
         )}
       </div>
@@ -591,7 +591,7 @@ export default function Chat({
                   <div className="protocol-icon"><MessageCircle size={20}/></div>
                   <div className="protocol-info">
                     <span className="protocol-name">Gateway WhatsApp</span>
-                    <span className="protocol-desc">Espelhar alertas críticos no telemóvel do agente</span>
+                    <span className="protocol-desc">Espelhar alertas críticos no celular do agente</span>
                   </div>
                 </button>
 

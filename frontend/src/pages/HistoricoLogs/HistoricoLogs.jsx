@@ -73,7 +73,7 @@ export default function HistoricoLogs({ historicoFiltradoLista = [], gerarExport
               Auditoria de Conformidade (RDC)
             </h3>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-              Registo centralizado de ocorrências e laudos técnicos imutáveis.
+              Registro centralizado de ocorrências e laudos técnicos imutáveis.
             </span>
           </div>
         </div>
@@ -104,7 +104,7 @@ export default function HistoricoLogs({ historicoFiltradoLista = [], gerarExport
 
         <div className="triage-filters-group">
           <button className={`triage-chip all ${filtroTipo === 'ALL' ? 'active' : ''}`} onClick={() => setFiltroTipo('ALL')}>
-            <Filter size={14}/> Todos os Registos <span className="chip-count">{kpis.total}</span>
+            <Filter size={14}/> Todos os Registros <span className="chip-count">{kpis.total}</span>
           </button>
           <button className={`triage-chip thermal ${filtroTipo === 'THERMAL' ? 'active' : ''}`} onClick={() => setFiltroTipo('THERMAL')}>
             <Thermometer size={14}/> Excursões Térmicas <span className="chip-count">{kpis.thermal}</span>
@@ -126,7 +126,7 @@ export default function HistoricoLogs({ historicoFiltradoLista = [], gerarExport
           <div className="empty-shield-box pulse-success-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
             <ShieldCheck size={48} color="var(--success)" />
           </div>
-          <h3>Registo Limpo</h3>
+          <h3>Registro Limpo</h3>
           <p>Não foram encontrados logs que correspondam aos filtros de auditoria selecionados. O histórico está em conformidade.</p>
         </div>
       ) : (
@@ -135,7 +135,7 @@ export default function HistoricoLogs({ historicoFiltradoLista = [], gerarExport
             const intl = getLogInteligencia(hist.mensagem);
             const IconCmp = intl.icon;
             
-            // Simulação de HASH de Auditoria para aspeto mais "NOC"
+            // Simulação de HASH de Auditoria para aspecto mais "NOC"
             const auditHash = `TX-${new Date(hist.data_hora).getTime().toString(16).toUpperCase()}-${hist.id}`;
 
             return (
@@ -149,7 +149,7 @@ export default function HistoricoLogs({ historicoFiltradoLista = [], gerarExport
                   {index < logsProcessados.length - 1 && <div className="timeline-line"></div>}
                 </div>
 
-                {/* Cartão de Registo */}
+                {/* Cartão de Registro */}
                 <div className="timeline-content card log-card" style={{ '--log-color': intl.color, '--log-bg': intl.bg, '--log-border': intl.border }}>
                   
                   {/* Cabeçalho do Log */}
@@ -157,7 +157,7 @@ export default function HistoricoLogs({ historicoFiltradoLista = [], gerarExport
                     <div className="log-meta-info">
                       <span className="log-timestamp">
                         <History size={14} /> 
-                        {new Date(hist.data_hora).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'medium' })}
+                        {new Date(hist.data_hora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'medium' })}
                       </span>
                       <span className="log-hash">ID: {auditHash}</span>
                     </div>
@@ -180,7 +180,7 @@ export default function HistoricoLogs({ historicoFiltradoLista = [], gerarExport
                     
                     <div className="log-issue-box" style={{ borderLeftColor: intl.color, background: 'rgba(0,0,0,0.02)' }}>
                       <Terminal size={14} className="terminal-icon"/>
-                      <span className="log-issue-text"><strong>Alarme Despoletado:</strong> {hist.mensagem}</span>
+                      <span className="log-issue-text"><strong>Alarme Disparado:</strong> {hist.mensagem}</span>
                     </div>
                   </div>
 

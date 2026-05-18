@@ -62,9 +62,20 @@
 }
 
 /* Cores néon para os valores principais (Cyber-look) */
-.kpi-neon-green { color: var(--success); text-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
-.kpi-neon-red { color: var(--danger); text-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
-.kpi-neon-blue { color: var(--info); text-shadow: 0 0 15px rgba(56, 189, 248, 0.3); }
+.kpi-neon-green {
+  color: var(--success);
+  text-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+}
+
+.kpi-neon-red {
+  color: var(--danger);
+  text-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
+
+.kpi-neon-blue {
+  color: var(--info);
+  text-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+}
 
 .kpi-relatorios-subtitle {
   font-size: 0.75rem;
@@ -97,17 +108,35 @@
 }
 
 .telemetry-tag {
-  display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 800;
-  padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
 }
-.telemetry-tag.success { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.2); }
-.telemetry-tag.error { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); animation: pulse-border-red 2s infinite; }
+
+.telemetry-tag.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.telemetry-tag.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  animation: pulse-border-red 2s infinite;
+}
 
 .controls-section {
   display: flex;
   flex-wrap: wrap;
   gap: 1.5rem;
-  align-items: flex-end; /* Alinha tudo pela base dos inputs */
+  align-items: flex-end;
+  /* Alinha tudo pela base dos inputs */
 }
 
 .filter-group {
@@ -121,7 +150,9 @@
   font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
-  display: flex; align-items: center; gap: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .select-tactical {
@@ -150,9 +181,18 @@
   border-right: 1px solid var(--border);
 }
 
-.btn-quick-range:last-child { border-right: none; }
-.btn-quick-range:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); }
-.dark-theme .btn-quick-range:hover { background: color-mix(in srgb, var(--primary) 20%, transparent); }
+.btn-quick-range:last-child {
+  border-right: none;
+}
+
+.btn-quick-range:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+}
+
+.dark-theme .btn-quick-range:hover {
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+}
 
 /* Estilização do DatePicker */
 .date-picker-custom {
@@ -173,16 +213,25 @@
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
 }
 
-.dark-theme .date-picker-custom { background-color: rgba(0, 0, 0, 0.2); }
+.dark-theme .date-picker-custom {
+  background-color: rgba(0, 0, 0, 0.2);
+}
 
 .relatorios-export-group {
   display: flex;
   gap: 10px;
-  margin-left: auto; /* Empurra os botões para a direita */
+  margin-left: auto;
+  /* Empurra os botões para a direita */
 }
 
-.btn-extract { padding: 10px 16px; font-size: 0.85rem; }
-.btn-extract.csv { border-style: dashed; }
+.btn-extract {
+  padding: 10px 16px;
+  font-size: 0.85rem;
+}
+
+.btn-extract.csv {
+  border-style: dashed;
+}
 
 /* =========================================
    VISUALIZAÇÃO DE DADOS (GRÁFICO E TABELA TÁTICA)
@@ -219,15 +268,32 @@
 
 /* Radar Scanner (Loading do Gráfico) */
 .radar-scanner-small {
-  width: 60px; height: 60px; border-radius: 50%; border: 1px solid rgba(16,185,129,0.2);
-  margin-bottom: 1rem; position: relative; overflow: hidden;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
 }
+
 .radar-scanner-small::after {
-  content: ''; position: absolute; top: 0; left: 0; width: 50%; height: 50%;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 50%;
   background: conic-gradient(transparent 70%, rgba(16, 185, 129, 0.8) 100%);
-  transform-origin: 100% 100%; animation: spin 2s linear infinite;
+  transform-origin: 100% 100%;
+  animation: spin 2s linear infinite;
 }
-@keyframes spin { 100% { transform: rotate(360deg); } }
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
 
 /* =========================================
    TABELA DATA-LOG (ESTILO TERMINAL)
@@ -237,9 +303,18 @@
   overflow-y: auto;
 }
 
-.table-raw-container::-webkit-scrollbar { width: 6px; }
-.table-raw-container::-webkit-scrollbar-track { background: transparent; }
-.table-raw-container::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 10px; }
+.table-raw-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.table-raw-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-raw-container::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 10px;
+}
 
 /* Transformação da Tabela Normal em Terminal */
 .terminal-table {
@@ -250,46 +325,120 @@
 }
 
 .terminal-table th {
-  font-size: 0.7rem; color: var(--text-muted); border-bottom: 1px solid var(--border); padding: 12px 10px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 10px;
 }
 
 .terminal-table td {
-  padding: 8px 10px; border-bottom: 1px solid rgba(100,116,139,0.1);
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.1);
 }
 
-.terminal-table tr { transition: background-color 0.1s; }
-.terminal-table tr:hover { background-color: color-mix(in srgb, var(--primary) 5%, transparent) !important; }
+.terminal-table tr {
+  transition: background-color 0.1s;
+}
+
+.terminal-table tr:hover {
+  background-color: color-mix(in srgb, var(--primary) 5%, transparent) !important;
+}
 
 /* Cores das Colunas do Terminal */
-.log-time { color: var(--text-muted); font-size: 0.75rem; }
-.log-node { color: var(--secondary); font-weight: 700; }
-.log-val { color: var(--text-main); font-weight: 700; text-align: right;}
+.log-time {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
 
-.log-normal:nth-child(even) { background: rgba(0,0,0,0.01); }
-.dark-theme .log-normal:nth-child(even) { background: rgba(255,255,255,0.01); }
+.log-node {
+  color: var(--secondary);
+  font-weight: 700;
+}
+
+.log-val {
+  color: var(--text-main);
+  font-weight: 700;
+  text-align: right;
+}
+
+.log-normal:nth-child(even) {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.dark-theme .log-normal:nth-child(even) {
+  background: rgba(255, 255, 255, 0.01);
+}
 
 /* Destaque Tático para Falhas de SLA (Terminal Critical) */
 .log-critical {
   background: rgba(239, 68, 68, 0.05) !important;
   border-left: 2px solid var(--danger);
 }
-.val-alert { color: var(--danger) !important; }
-.val-ok { color: var(--success) !important; }
+
+.val-alert {
+  color: var(--danger) !important;
+}
+
+.val-ok {
+  color: var(--success) !important;
+}
 
 /* =========================================
    RESPONSIVIDADE (MOBILE)
    ========================================= */
 @media (max-width: 768px) {
-  .controls-section { flex-direction: column; align-items: stretch; }
-  .filter-group, .select-tactical, .date-picker-custom { width: 100%; }
-  .date-group > div { flex-direction: column; width: 100%; }
-  .date-group > div > div { width: 100%; }
-  .relatorios-export-group { flex-direction: column; margin-left: 0; margin-top: 10px; }
-  .btn-extract { width: 100%; justify-content: center; }
+  .controls-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group,
+  .select-tactical,
+  .date-picker-custom {
+    width: 100%;
+  }
+
+  .date-group>div {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .date-group>div>div {
+    width: 100%;
+  }
+
+  .relatorios-export-group {
+    flex-direction: column;
+    margin-left: 0;
+    margin-top: 10px;
+  }
+
+  .btn-extract {
+    width: 100%;
+    justify-content: center;
+  }
 
   /* Ajuste tabela terminal no mobile */
-  .terminal-table thead { display: none; }
-  .terminal-table tr { display: flex; flex-direction: column; border: 1px solid var(--border); margin-bottom: 10px; border-radius: 8px; padding: 10px;}
-  .terminal-table td { display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(100,116,139,0.2); }
-  .terminal-table td:last-child { border-bottom: none; }
+  .terminal-table thead {
+    display: none;
+  }
+
+  .terminal-table tr {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  .terminal-table td {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed rgba(100, 116, 139, 0.2);
+  }
+
+  .terminal-table td:last-child {
+    border-bottom: none;
+  }
 }

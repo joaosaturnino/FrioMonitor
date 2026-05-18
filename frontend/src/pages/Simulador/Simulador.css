@@ -1,0 +1,17 @@
+.simulador-container {
+    max-width: 700px;
+    margin: 2rem auto;
+}
+
+.simulador-card {
+    background: var(--card-bg);
+    border: 2px solid var(--danger) !important;
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.1);
+    border-radius: 16px;
+    padding: 2rem;
+}
+
+.simulador-card label {
+    color: var(--danger) !important;
+    font-weight: 700;
+}

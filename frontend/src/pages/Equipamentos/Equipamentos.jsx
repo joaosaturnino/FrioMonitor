@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   PlusCircle, ShieldCheck, AlertTriangle, ClipboardCheck, Edit, X, 
   Thermometer, Droplets, PackageSearch, Settings, MapPin, 
-  Server, Search, Activity, ChevronDown, ChevronUp, Zap
+  Server, Search, Activity, ChevronDown, ChevronUp, Zap, Trash2
 } from 'lucide-react';
 import './Equipamentos.css';
 
@@ -19,41 +19,68 @@ export default function Equipamentos({
   };
   
   const [formEquip, setFormEquip] = useState({ ...formInicial });
-  const [isFormOpen, setIsFormOpen] = useState(false); // Controla o Painel Retrátil
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [buscaAtivo, setBuscaAtivo] = useState('');
 
-  // Auto-Preenchimento ANVISA
+  // 🔥 Auto-Preenchimento Inteligente (DB + Dicionário ANVISA Fallback)
   const aplicarNormaANVISA = (tipoSelecionado) => {
-    if (!tipoSelecionado) return showToast('Selecione um Tipo de Refrigeração na secção acima primeiro.', 'warning');
+    if (!tipoSelecionado) return showToast('Selecione um Tipo de Refrigeração na seção acima primeiro.', 'warning');
+    
     const tipoEncontrado = (listaTipos || []).find(t => t.nome === tipoSelecionado);
-    if (tipoEncontrado) {
-      setFormEquip(prev => ({ 
-        ...prev, 
-        temp_min: tipoEncontrado.temp_min, temp_max: tipoEncontrado.temp_max, 
-        umidade_min: tipoEncontrado.umidade_min, umidade_max: tipoEncontrado.umidade_max, 
-        intervalo_degelo: tipoEncontrado.intervalo_degelo, duracao_degelo: tipoEncontrado.duracao_degelo 
-      }));
-      showToast('Padrão Técnico Operacional (SLA) aplicado com sucesso!', 'success');
-    } else {
-      showToast('Tipo de Refrigeração não encontrado no sistema.', 'error');
+    const nomeLower = tipoSelecionado.toLowerCase();
+
+    // Dicionário Base de Normas ANVISA
+    let tMin = 2, tMax = 8, uMin = 40, uMax = 80, iDeg = 12, dDeg = 20; // Padrão: Resfriados
+
+    if (nomeLower.includes('congel') || nomeLower.includes('ilha')) {
+      tMin = -22; tMax = -18; uMin = 0; uMax = 0; iDeg = 6; dDeg = 30;
+    } else if (nomeLower.includes('balcão') || nomeLower.includes('balcao') || nomeLower.includes('expositor')) {
+      tMin = 0; tMax = 5; uMin = 40; uMax = 80; iDeg = 8; dDeg = 25;
+    } else if (nomeLower.includes('vacina') || nomeLower.includes('medicamento')) {
+      tMin = 2; tMax = 8; uMin = 0; uMax = 0; iDeg = 24; dDeg = 15;
+    } else if (nomeLower.includes('câmara') || nomeLower.includes('camara') || nomeLower.includes('fria')) {
+      tMin = 2; tMax = 8; uMin = 50; uMax = 85; iDeg = 12; dDeg = 30;
     }
+
+    const hasValidVal = (val) => val !== undefined && val !== null && val !== '';
+
+    // A DB tem prioridade! Se o usuário configurou os valores na tela de "Parâmetros Globais", usa os da DB.
+    if (tipoEncontrado) {
+      if (hasValidVal(tipoEncontrado.temp_min)) tMin = tipoEncontrado.temp_min;
+      if (hasValidVal(tipoEncontrado.temp_max)) tMax = tipoEncontrado.temp_max;
+      if (hasValidVal(tipoEncontrado.umidade_min)) uMin = tipoEncontrado.umidade_min;
+      if (hasValidVal(tipoEncontrado.umidade_max)) uMax = tipoEncontrado.umidade_max;
+      if (hasValidVal(tipoEncontrado.intervalo_degelo)) iDeg = tipoEncontrado.intervalo_degelo;
+      if (hasValidVal(tipoEncontrado.duracao_degelo)) dDeg = tipoEncontrado.duracao_degelo;
+    }
+
+    setFormEquip(prev => ({ 
+      ...prev, 
+      temp_min: tMin, 
+      temp_max: tMax, 
+      umidade_min: uMin, 
+      umidade_max: uMax, 
+      intervalo_degelo: iDeg, 
+      duracao_degelo: dDeg 
+    }));
+    
+    showToast(`Padrão ANVISA/RDC aplicado para: ${tipoSelecionado}`, 'success');
   };
 
   const salvarNovoEquipamento = async (e) => {
     e.preventDefault(); 
-    if (isOffline) return showToast('Ação bloqueada. Sem ligação à rede.', 'warning');
+    if (isOffline) return showToast('Ação bloqueada. Sem conexão com a rede.', 'warning');
     
     const dadosFinais = { ...formEquip, filial: userRole === 'LOJA' ? userFilial : formEquip.filial };
     try { 
       await api.post('/equipamentos', dadosFinais); 
-      showToast('Máquina registada no Inventário IoT.', 'success'); 
+      showToast('Máquina registrada no Inventário IoT.', 'success'); 
       setFormEquip({ ...formInicial, filial: userRole === 'LOJA' ? userFilial : '' }); 
       setIsFormOpen(false);
       carregarDadosBase(); 
     } catch (e) { showToast('Ocorreu um erro ao gravar a máquina.', 'error'); }
   };
 
-  // Filtragem Inteligente Local
   const ativosExibidos = useMemo(() => {
     if (!equipamentosFiltradosLista) return [];
     if (!buscaAtivo.trim()) return equipamentosFiltradosLista;
@@ -67,14 +94,13 @@ export default function Equipamentos({
     );
   }, [equipamentosFiltradosLista, buscaAtivo]);
 
-  // KPIs Preditivos de Metrologia e Saúde
   const kpis = useMemo(() => {
     if (!ativosExibidos) return { total: 0, riscoCalib: 0, offlines: 0, degelo: 0 };
     let riscoCalib = 0; let offlines = 0; let degelo = 0;
 
     ativosExibidos.forEach(eq => {
       const diasCalib = eq.data_calibracao ? Math.floor((Date.now() - new Date(eq.data_calibracao).getTime()) / (1000 * 60 * 60 * 24)) : 0;
-      if (diasCalib > 330) riscoCalib++; // Aviso 30 dias antes de fazer 1 ano
+      if (diasCalib > 330) riscoCalib++; 
       if (!eq.motor_ligado) offlines++;
       if (eq.em_degelo) degelo++;
     });
@@ -85,7 +111,6 @@ export default function Equipamentos({
   return (
     <div className="anim-fade-in stagger-1">
       
-      {/* CABEÇALHO DA GESTÃO DE ATIVOS */}
       <div className="flex-header equipamentos-header">
         <div>
           <h3 className="equipamentos-title">Inventário de Equipamentos & Metrologia</h3>
@@ -97,7 +122,7 @@ export default function Equipamentos({
             <Search size={16} color="var(--text-muted)" />
             <input 
               type="text" 
-              placeholder="Procurar ativo, setor ou tipo..." 
+              placeholder="Pesquisar ativo, setor ou tipo..." 
               value={buscaAtivo}
               onChange={(e) => setBuscaAtivo(e.target.value)}
             />
@@ -113,7 +138,6 @@ export default function Equipamentos({
         </div>
       </div>
 
-      {/* PAINEL DE KPIs PREDITIVOS */}
       <div className="iot-kpi-bar stagger-2">
         <div className="kpi-item total">
           <div className="kpi-icon"><Server size={20}/></div>
@@ -138,7 +162,6 @@ export default function Equipamentos({
         </div>
       </div>
 
-      {/* SMART PANEL: FORMULÁRIO RETRÁTIL */}
       <div className={`smart-form-panel ${isFormOpen ? 'open' : ''}`}>
         <div className="card equipamentos-card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--primary)' }}>
           <div className="equipamentos-card-header">
@@ -146,7 +169,6 @@ export default function Equipamentos({
           </div>
           
           <form onSubmit={salvarNovoEquipamento}>
-            {/* SECÇÃO 1: Identificação */}
             <div className="form-section">
               <div className="form-section-header">
                 <h4 className="form-section-title"><MapPin size={16} color="var(--text-muted)"/> Identificação Física</h4>
@@ -172,7 +194,12 @@ export default function Equipamentos({
                 </div>
                 <div>
                     <label>Padrão Técnico (Tipo)</label>
-                    <select className="select-input" value={formEquip.tipo} onChange={(e) => setFormEquip({ ...formEquip, tipo: e.target.value })} required>
+                    <select 
+                      className="select-input" 
+                      value={formEquip.tipo} 
+                      onChange={(e) => setFormEquip({ ...formEquip, tipo: e.target.value })} 
+                      required
+                    >
                       <option value="">Selecione o Tipo...</option>
                       {listaTipos?.map(t => <option key={t.id} value={t.nome}>{t.nome}</option>)}
                     </select>
@@ -180,10 +207,11 @@ export default function Equipamentos({
               </div>
             </div>
 
-            {/* SECÇÃO 2: Limites SLA (ANVISA AUTO) */}
             <div className="form-section">
               <div className="form-section-header">
                 <h4 className="form-section-title"><ShieldCheck size={16} color="var(--success)"/> Parâmetros de SLA & Alertas</h4>
+                
+                {/* BOTÃO NORMAS ANVISA / BLUEPRINT SLA */}
                 <button 
                   type="button" 
                   className="btn btn-anvisa" 
@@ -204,17 +232,16 @@ export default function Equipamentos({
                     <input type="number" step="0.1" value={formEquip.temp_max} onChange={(e) => setFormEquip({ ...formEquip, temp_max: e.target.value })} required />
                 </div>
                 <div>
-                    <label>Humidade Mínima (%)</label>
+                    <label>Umidade Mínima (%)</label>
                     <input type="number" step="0.1" value={formEquip.umidade_min} onChange={(e) => setFormEquip({ ...formEquip, umidade_min: e.target.value })} />
                 </div>
                 <div>
-                    <label>Humidade Máxima (%)</label>
+                    <label>Umidade Máxima (%)</label>
                     <input type="number" step="0.1" value={formEquip.umidade_max} onChange={(e) => setFormEquip({ ...formEquip, umidade_max: e.target.value })} />
                 </div>
               </div>
             </div>
 
-            {/* SECÇÃO 3: Metrologia */}
             <div className="form-section" style={{ marginBottom: 0 }}>
               <div className="form-section-header">
                 <h4 className="form-section-title"><Thermometer size={16} color="var(--warning)"/> Metrologia Oficial e Ciclos</h4>
@@ -244,7 +271,6 @@ export default function Equipamentos({
         </div>
       </div>
       
-      {/* TABELA DE ATIVOS CADASTRADOS */}
       <div className="card table-responsive stagger-3">
         {(!ativosExibidos || ativosExibidos.length === 0) ? (
           <div className="empty-state dashboard-empty">
@@ -260,13 +286,12 @@ export default function Equipamentos({
                 <th>Identificação do Hardware</th>
                 <th style={{ width: '250px' }}>Metrologia (Saúde da Aferição)</th>
                 <th>SLA Térmico Configurado</th>
-                <th style={{ textAlign: 'right' }}>Painel de Controlo</th>
+                <th style={{ textAlign: 'right' }}>Ações</th>
               </tr>
             </thead>
             <tbody>
               {ativosExibidos.map(eq => {
                  const diasCalib = eq.data_calibracao ? Math.floor((Date.now() - new Date(eq.data_calibracao).getTime()) / (1000 * 60 * 60 * 24)) : 0;
-                 // Calcula percentagem (Assumindo validade de 365 dias)
                  const calibPercent = Math.min(100, Math.max(0, (diasCalib / 365) * 100));
                  const isCritico = diasCalib > 330;
                  const isExpirado = diasCalib > 365;
@@ -283,7 +308,7 @@ export default function Equipamentos({
                         <span 
                           className={`status-ring ${isPulse ? 'pulse' : ''}`} 
                           style={{ color: ringColor }}
-                          title={eq.em_degelo ? 'Em Degelo' : (!eq.motor_ligado ? 'Motor Parado/Falha' : 'A Operar Normalmente')}
+                          title={eq.em_degelo ? 'Em Degelo' : (!eq.motor_ligado ? 'Motor Parado/Falha' : 'Operando Normalmente')}
                         ></span> 
                         <strong>{eq.filial}</strong>
                       </div>
@@ -300,7 +325,7 @@ export default function Equipamentos({
                       <div className="metrology-box">
                         <div className="metrology-labels">
                           <span style={{ color: isExpirado ? 'var(--danger)' : (isCritico ? 'var(--warning)' : 'var(--text-muted)') }}>
-                            {isExpirado ? '⚠️ Certificado Expirado' : (isCritico ? 'Atenção: A expirar' : 'Dentro da Validade')}
+                            {isExpirado ? '⚠️ Certificado Expirado' : (isCritico ? 'Atenção: Prestes a expirar' : 'Dentro da Validade')}
                           </span>
                           <strong>{diasCalib} dias</strong>
                         </div>
@@ -326,20 +351,29 @@ export default function Equipamentos({
                       </div>
                     </td>
                     
-                    <td data-label="Controlo" style={{ textAlign: 'right' }}>
-                      <button className="btn btn-action edit" onClick={() => editarEquipamento(eq)} disabled={isOffline} title="Reconfigurar Hardware">
-                        <Settings size={18} />
-                      </button>
-                      <button 
-                        className="btn btn-action delete" 
-                        style={isOffline ? { color: 'var(--text-muted)', background: 'transparent' } : {}}
-                        onClick={() => pedirExclusao(eq.id, eq.nome)} 
-                        disabled={isOffline}
-                        title="Desmantelar Ativo Permanentemente"
-                      >
-                        <X size={18} />
-                      </button>
+                    {/* 👇 BOTÕES ATUALIZADOS AQUI 👇 */}
+                    <td data-label="Ações" style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button 
+                          className="btn btn-action edit" 
+                          onClick={() => editarEquipamento(eq)} 
+                          disabled={isOffline} 
+                          title="Editar Equipamento"
+                        >
+                          <Edit size={18} />
+                        </button>
+                        <button 
+                          className="btn btn-action delete" 
+                          style={isOffline ? { color: 'var(--text-muted)', background: 'transparent' } : {}}
+                          onClick={() => pedirExclusao(eq.id, eq.nome)} 
+                          disabled={isOffline}
+                          title="Excluir Equipamento"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
+
                   </tr>
                 )
               })}

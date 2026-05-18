@@ -23,7 +23,7 @@
   height: 48px;
   border-radius: 14px;
   flex-shrink: 0;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 /* Indicador de Telemetria Ativa */
@@ -38,9 +38,17 @@
 }
 
 @keyframes pulse-live {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 /* Nova Barra de Pesquisa de Equipamentos */
@@ -92,12 +100,12 @@
 }
 
 .btn-focus-mode:hover {
-  background: rgba(0,0,0,0.05);
+  background: rgba(0, 0, 0, 0.05);
   color: var(--text-main);
 }
 
 .dark-theme .btn-focus-mode:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .btn-focus-mode.active {
@@ -127,13 +135,13 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .kpi-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
 }
 
 .pulse-kpi-danger {
@@ -142,9 +150,17 @@
 }
 
 @keyframes pulse-kpi-success {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 20px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 .kpi-icon {
@@ -161,14 +177,44 @@
   flex-direction: column;
 }
 
-.kpi-value { font-size: 1.2rem; font-weight: 800; color: var(--text-main); }
-.kpi-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;}
+.kpi-value {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
 
-.kpi-item.total .kpi-icon { background: rgba(100, 116, 139, 0.1); color: var(--text-main); }
-.kpi-item.ok .kpi-icon { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-.kpi-item.danger .kpi-icon { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-.kpi-item.info .kpi-icon { background: rgba(14, 165, 233, 0.1); color: #0ea5e9; }
-.kpi-item.warning .kpi-icon { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+.kpi-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi-item.total .kpi-icon {
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--text-main);
+}
+
+.kpi-item.ok .kpi-icon {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.kpi-item.danger .kpi-icon {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.kpi-item.info .kpi-icon {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0ea5e9;
+}
+
+.kpi-item.warning .kpi-icon {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
 
 /* =========================================
    GRELHA DE ATIVOS E CARTÕES
@@ -189,31 +235,56 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
 }
 
 .monitor-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
   border-color: color-mix(in srgb, var(--primary) 50%, transparent);
 }
 
 .monitor-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 4px;
 }
 
-.monitor-card.status-normal::before { background: var(--success); }
-.monitor-card.status-alerta::before { background: var(--danger); box-shadow: 0 0 10px var(--danger); animation: pulse-border-red 2s infinite;}
-.monitor-card.status-degelo::before { background: #0ea5e9; }
-.monitor-card.status-parado::before { background: var(--danger); }
-.monitor-card.status-offline::before { background: var(--warning); }
+.monitor-card.status-normal::before {
+  background: var(--success);
+}
+
+.monitor-card.status-alerta::before {
+  background: var(--danger);
+  box-shadow: 0 0 10px var(--danger);
+  animation: pulse-border-red 2s infinite;
+}
+
+.monitor-card.status-degelo::before {
+  background: #0ea5e9;
+}
+
+.monitor-card.status-parado::before {
+  background: var(--danger);
+}
+
+.monitor-card.status-offline::before {
+  background: var(--warning);
+}
 
 @keyframes pulse-border-red {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 0.3; }
+
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .monitor-card-header {
@@ -262,11 +333,32 @@
   flex-shrink: 0;
 }
 
-.badge-normal { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-.badge-alerta { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); animation: pulse-bg-red 2s infinite;}
-.badge-degelo { background: rgba(14, 165, 233, 0.1); color: #0ea5e9; }
-.badge-parado { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-.badge-offline { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+.badge-normal {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.badge-alerta {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  animation: pulse-bg-red 2s infinite;
+}
+
+.badge-degelo {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0ea5e9;
+}
+
+.badge-parado {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.badge-offline {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
 
 .monitor-leitura-principal {
   text-align: center;
@@ -278,7 +370,7 @@
   font-weight: 900;
   letter-spacing: -1px;
   font-family: monospace;
-  text-shadow: inset 0px 2px 4px rgba(0,0,0,0.1);
+  text-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .piscar-alerta {
@@ -286,20 +378,30 @@
 }
 
 @keyframes blink-text {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
 }
 
 /* =========================================
    BARRA TÉRMICA INTELIGENTE (GAUGE GRADIENT)
    ========================================= */
 .monitor-limites {
-  background: rgba(0,0,0,0.02);
+  background: rgba(0, 0, 0, 0.02);
   border-radius: 12px;
   padding: 12px;
   margin-bottom: 1rem;
 }
-.dark-theme .monitor-limites { background: rgba(255,255,255,0.02); }
+
+.dark-theme .monitor-limites {
+  background: rgba(255, 255, 255, 0.02);
+}
 
 .limites-text {
   display: flex;
@@ -335,7 +437,7 @@
   height: 16px;
   background: var(--card-bg);
   border-radius: 50%;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
   z-index: 2;
 }
 
@@ -363,10 +465,22 @@
   font-weight: 800;
   letter-spacing: 0.5px;
 }
-.footer-alerta.warning { color: var(--warning); }
-.footer-alerta.danger { color: var(--danger); }
-.footer-alerta.info { color: #0ea5e9; }
-.footer-alerta.success { color: var(--success); }
+
+.footer-alerta.warning {
+  color: var(--warning);
+}
+
+.footer-alerta.danger {
+  color: var(--danger);
+}
+
+.footer-alerta.info {
+  color: #0ea5e9;
+}
+
+.footer-alerta.success {
+  color: var(--success);
+}
 
 /* =========================================
    ESTADO VAZIO (EMPTY STATE)
@@ -395,8 +509,20 @@
 }
 
 @media (max-width: 600px) {
-  .monitoramento-header { flex-direction: column; align-items: stretch; }
-  .action-group .select-input { width: 100%; }
-  .monitor-search-box { min-width: 100%; }
-  .btn-focus-mode { justify-content: center; }
+  .monitoramento-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-group .select-input {
+    width: 100%;
+  }
+
+  .monitor-search-box {
+    min-width: 100%;
+  }
+
+  .btn-focus-mode {
+    justify-content: center;
+  }
 }

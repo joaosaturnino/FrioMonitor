@@ -10,13 +10,13 @@ const DEFAULT_FEATURES = {
   readOnlyMode: false
 };
 
-export function useSystemCore(userRole, loginAtivo, abaAtiva, setAbaAtiva) {
+export function useSystemCore(userRole, loginAtivo, userFilial, abaAtiva, setAbaAtiva) {
   
   // =========================================================================
-  // 1. ESTADO GLOBAL DO SISTEMA (SysConfig V9)
+  // 1. ESTADO GLOBAL DO SISTEMA (SysConfig SaaS)
   // =========================================================================
   const [sysConfig, setSysConfig] = useState(() => {
-    const saved = localStorage.getItem('termosync_sysconfig_v9');
+    const saved = localStorage.getItem('termosync_sysconfig_saas');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
@@ -29,35 +29,55 @@ export function useSystemCore(userRole, loginAtivo, abaAtiva, setAbaAtiva) {
         'MANUTENCAO': { modulosOcultos: [], features: { ...DEFAULT_FEATURES } },
         'DEV': { modulosOcultos: [], features: { ...DEFAULT_FEATURES } },
         'USERS': {}
-      }
+      },
+      planos: {}
     };
   });
 
   // =========================================================================
-  // 2. OUVINTE DE SINCRONIZAÇÃO EM TEMPO REAL (Múltiplas Abas)
+  // 2. OUVINTE DE SINCRONIZAÇÃO EM TEMPO REAL
   // =========================================================================
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'termosync_sysconfig_v9' && e.newValue) {
+      if (e.key === 'termosync_sysconfig_saas' && e.newValue) {
         try { setSysConfig(JSON.parse(e.newValue)); } catch (err) {}
       }
-      if (e.key === 'termosync_force_reload') {
-        window.location.reload(); 
-      }
+      if (e.key === 'termosync_force_reload') window.location.reload(); 
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // =========================================================================
-  // 3. MOTOR DE VALIDAÇÃO DE FEATURES (Com Fallbacks Seguros)
+  // 3. MOTOR DE VALIDAÇÃO DE PLANOS (PAYWALL)
+  // =========================================================================
+  const getPlanoAtual = useCallback(() => {
+    if (userRole === 'DEV' || userRole === 'ADMIN') return 'ENTERPRISE';
+    return sysConfig.planos?.[userFilial] || 'FREE'; 
+  }, [sysConfig.planos, userFilial, userRole]);
+
+  const hasPremiumAccess = useCallback((requiredPlan) => {
+    if (userRole === 'DEV') return true; // 🛡️ BLINDAGEM: DEV sempre tem acesso premium
+
+    const planoAtual = getPlanoAtual();
+    if (planoAtual === 'ENTERPRISE') return true;
+    if (planoAtual === 'PRO' && (requiredPlan === 'FREE' || requiredPlan === 'PRO')) return true;
+    if (planoAtual === 'FREE' && requiredPlan === 'FREE') return true;
+    return false;
+  }, [getPlanoAtual, userRole]);
+
+  // =========================================================================
+  // 4. MOTOR DE VALIDAÇÃO DE FEATURES E MÓDULOS
   // =========================================================================
   const isFeatureEnabled = useCallback((featureKey) => {
+    // 🛡️ BLINDAGEM DO DESENVOLVEDOR (GOD MODE)
     if (userRole === 'DEV') {
-      if (featureKey === 'readOnlyMode') return false; 
-      if (featureKey === 'forceDarkMode') return sysConfig?.regras?.['GLOBAL']?.features?.forceDarkMode ?? false;
-      return true;
+      if (featureKey === 'readOnlyMode') return false; // DEV nunca fica bloqueado em modo Leitura
+      if (featureKey === 'forceDarkMode') return sysConfig?.regras?.['GLOBAL']?.features?.forceDarkMode ?? false; // Acompanha a escolha global do dark mode para testar
+      return true; // TODAS as outras features (exports, som, chat) estão sempre ON para o DEV
     } 
+    
+    // Regras normais para o resto dos utilizadores
     try {
       const globalFlag = sysConfig?.regras?.['GLOBAL']?.features?.[featureKey] ?? true;
       const roleFlag = sysConfig?.regras?.[userRole]?.features?.[featureKey] ?? true;
@@ -72,21 +92,25 @@ export function useSystemCore(userRole, loginAtivo, abaAtiva, setAbaAtiva) {
     } catch (e) { return true; }
   }, [sysConfig, userRole, loginAtivo]);
 
-  // =========================================================================
-  // 4. MOTOR DE VALIDAÇÃO DE MÓDULOS (TELAS)
-  // =========================================================================
   const isModuloOculto = useCallback((moduleId) => {
-    if (moduleId === 'dev_panel') return false; 
+    // 🛡️ BLINDAGEM DO DESENVOLVEDOR: DEV VÊ TODAS AS ABAS, SEMPRE.
+    if (userRole === 'DEV') return false; 
+    
+    // SaaS Paywall Hardcode (Relatórios e Histórico exigem plano PRO)
+    if ((moduleId === 'relatorios' || moduleId === 'historico') && !hasPremiumAccess('PRO')) {
+        return true; 
+    }
+
     try {
       const globalHidden = sysConfig?.regras?.['GLOBAL']?.modulosOcultos?.includes(moduleId) || false;
       const roleHidden = sysConfig?.regras?.[userRole]?.modulosOcultos?.includes(moduleId) || false;
       const userHidden = sysConfig?.regras?.USERS?.[loginAtivo]?.modulosOcultos?.includes(moduleId) || false;
       return globalHidden || roleHidden || userHidden;
     } catch (e) { return false; }
-  }, [sysConfig, userRole, loginAtivo]);
+  }, [sysConfig, userRole, loginAtivo, hasPremiumAccess]);
 
   // =========================================================================
-  // 5. FUNÇÃO DE ATUALIZAÇÃO DO KERNEL (Usada pelo Painel Dev)
+  // 5. FUNÇÃO DE ATUALIZAÇÃO DO KERNEL
   // =========================================================================
   const updateSysConfig = useCallback((scopeType, target, category, key, value) => {
     setSysConfig(prev => {
@@ -94,6 +118,15 @@ export function useSystemCore(userRole, loginAtivo, abaAtiva, setAbaAtiva) {
         const newConfig = JSON.parse(JSON.stringify(prev)); 
         if (!newConfig.regras) newConfig.regras = {};
         if (!newConfig.regras.USERS) newConfig.regras.USERS = {};
+        if (!newConfig.planos) newConfig.planos = {};
+
+        // Atualização de Licenças SaaS
+        if (category === 'saas_plan') {
+           newConfig.planos[target] = value;
+           localStorage.setItem('termosync_sysconfig_saas', JSON.stringify(newConfig));
+           localStorage.setItem('sysconfig_ping', Date.now().toString()); 
+           return newConfig;
+        }
 
         let targetRef;
         if (scopeType === 'USER') {
@@ -119,7 +152,6 @@ export function useSystemCore(userRole, loginAtivo, abaAtiva, setAbaAtiva) {
             targetRef.modulosOcultos.push(key);
           }
           
-          // Se a tela for ocultada enquanto o utilizador a vê, empurra-o para o Dashboard
           if ((scopeType === 'ROLE' && (target === 'GLOBAL' || target === userRole)) || (scopeType === 'USER' && target === loginAtivo)) {
              if (targetRef.modulosOcultos.includes(abaAtiva) && abaAtiva !== 'dashboard' && abaAtiva !== 'dev_panel') {
                 setTimeout(() => setAbaAtiva('dashboard'), 0);
@@ -130,7 +162,7 @@ export function useSystemCore(userRole, loginAtivo, abaAtiva, setAbaAtiva) {
           targetRef.features[key] = value;
         }
 
-        localStorage.setItem('termosync_sysconfig_v9', JSON.stringify(newConfig));
+        localStorage.setItem('termosync_sysconfig_saas', JSON.stringify(newConfig));
         localStorage.setItem('sysconfig_ping', Date.now().toString()); 
         return newConfig;
       } catch (e) {
@@ -139,11 +171,5 @@ export function useSystemCore(userRole, loginAtivo, abaAtiva, setAbaAtiva) {
     });
   }, [abaAtiva, userRole, loginAtivo, setAbaAtiva]);
 
-  // Retorna as funções prontas para o App.jsx utilizar
-  return {
-    sysConfig,
-    isFeatureEnabled,
-    isModuloOculto,
-    updateSysConfig
-  };
+  return { sysConfig, isFeatureEnabled, isModuloOculto, updateSysConfig, getPlanoAtual, hasPremiumAccess };
 }
