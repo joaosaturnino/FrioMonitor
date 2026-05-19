@@ -15,7 +15,8 @@ import {
   AlertOctagon, Edit, Save, MessageSquare, Globe2, WifiOff, Terminal, 
   Server, Lock, Unlock, Search, Keyboard, Loader2, ShieldAlert, DollarSign, Building2,
   Bell, Wifi, Snowflake, Power, DoorOpen, ActivitySquare, ClipboardCheck, ThermometerSnowflake,
-  Map, Columns, Target, Cpu, Info, Settings2, ShieldCheck, PieChart, FileSpreadsheet
+  Map, Columns, Target, Cpu, Info, Settings2, ShieldCheck, PieChart, FileSpreadsheet,
+  ChevronDown, ChevronRight
 } from 'lucide-react';
 
 import TermoSyncLogo from './components/TermoSyncLogo';
@@ -245,6 +246,40 @@ export default function App() {
   const [devBootData, setDevBootData] = useState(null);
   
   const [bannerFechado, setBannerFechado] = useState(true);
+
+  // NOVO ESTADO: Controle de Grupos Expansíveis
+  const [gruposExpandidos, setGruposExpandidos] = useState({
+    'Desenvolvedor': true,
+    'Operações': true,
+    'Serviços': true,
+    'Auditoria': true,
+    'Sistema': true
+  });
+
+  // NOVO EFEITO: Minimiza outros menus quando for DEV
+  useEffect(() => {
+    if (userRole === 'DEV') {
+      setGruposExpandidos({
+        'Desenvolvedor': true,
+        'Operações': false,
+        'Serviços': false,
+        'Auditoria': false,
+        'Sistema': false
+      });
+    } else {
+      setGruposExpandidos({
+        'Desenvolvedor': true,
+        'Operações': true,
+        'Serviços': true,
+        'Auditoria': true,
+        'Sistema': true
+      });
+    }
+  }, [userRole]);
+
+  const toggleGrupo = (grupo) => {
+    setGruposExpandidos(prev => ({ ...prev, [grupo]: !prev[grupo] }));
+  };
   
   useEffect(() => { if (token) sessionStorage.setItem('abaAtiva', abaAtiva); }, [abaAtiva, token]);
 
@@ -906,7 +941,11 @@ export default function App() {
             <div className="cmd-results">
               <div className="cmd-group">Navegação Rápida</div>
               {NAVIGATION_ATIVA.filter(n => n.label.toLowerCase().includes(cmdSearch.toLowerCase())).map(nav => (
-                <button key={nav.id} className="cmd-item" onClick={() => { setAbaAtiva(nav.id); setShowCommandPalette(false); }}>
+                <button key={nav.id} className="cmd-item" onClick={() => { 
+                  setAbaAtiva(nav.id); 
+                  setGruposExpandidos(prev => ({ ...prev, [nav.type]: true }));
+                  setShowCommandPalette(false); 
+                }}>
                   <nav.icon size={18} className="cmd-item-icon"/> <span>Acessar <strong>{nav.label}</strong></span>
                 </button>
               ))}
@@ -957,20 +996,29 @@ export default function App() {
           {['Desenvolvedor', 'Operações', 'Serviços', 'Auditoria', 'Sistema'].map(group => {
             const itemsInGroup = NAVIGATION_ATIVA.filter(n => n.type === group);
             if (itemsInGroup.length === 0) return null;
+            
+            const isExpanded = gruposExpandidos[group];
+
             return (
-              <React.Fragment key={group}>
-                <div className="nav-group-label hide-on-collapse">{group}</div>
-                {itemsInGroup.map(item => (
-                  <button key={item.id} className={`nav-item ${abaAtiva === item.id ? 'active' : ''}`} onClick={() => { setAbaAtiva(item.id); if(window.innerWidth <= 768) setMenuAberto(false); }} title={item.label}>
-                    <item.icon size={20} />
-                    <span className="nav-item-text hide-on-collapse">
-                      {item.label}
-                      {item.isPremium && getPlanoAtual() !== 'FREE' && <span style={{marginLeft: '6px', fontSize: '0.6rem', color: 'var(--info)'}}>★</span>}
-                    </span>
-                    {item.badge > 0 && <span className="badge hide-on-collapse">{item.badge}</span>}
-                  </button>
-                ))}
-              </React.Fragment>
+              <div key={group} className="nav-group">
+                <div className="nav-group-label hide-on-collapse" onClick={() => toggleGrupo(group)}>
+                  <span>{group}</span>
+                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </div>
+                
+                <div className={`nav-group-items ${isExpanded ? 'expanded' : 'collapsed'}`}>
+                  {itemsInGroup.map(item => (
+                    <button key={item.id} className={`nav-item ${abaAtiva === item.id ? 'active' : ''}`} onClick={() => { setAbaAtiva(item.id); if(window.innerWidth <= 768) setMenuAberto(false); }} title={item.label}>
+                      <item.icon size={20} />
+                      <span className="nav-item-text hide-on-collapse">
+                        {item.label}
+                        {item.isPremium && getPlanoAtual() !== 'FREE' && <span style={{marginLeft: '6px', fontSize: '0.6rem', color: 'var(--info)'}}>★</span>}
+                      </span>
+                      {item.badge > 0 && <span className="badge hide-on-collapse">{item.badge}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
             );
           })}
         </nav>
@@ -1088,7 +1136,6 @@ export default function App() {
             {!isModuloOculto('usuarios') && abaAtiva === 'usuarios' && (userRole === 'ADMIN' || userRole === 'DEV') && ( <GestaoUsuarios api={api} showToast={showToast} usuariosLista={usuariosLista} carregarUsuarios={carregarUsuarios} filiaisDb={filiaisDb} setModalConfig={setModalConfig} /> )}
             {!isModuloOculto('parametros') && abaAtiva === 'parametros' && (userRole === 'ADMIN' || userRole === 'DEV') && ( <ParametrosGlobais api={api} showToast={showToast} listaSetores={listaSetores} listaTipos={listaTipos} carregarParametrosGerais={carregarParametrosGerais} carregarDadosBase={carregarDadosBase} setModalConfig={setModalConfig} /> )}
             
-            {/* 👇 Rota Core do Desenvolvedor Expandida para incluir 'bi' 👇 */}
             {['empresas', 'dev_panel', 'saas', 'billing', 'system', 'soc', 'bi'].includes(abaAtiva) && userRole === 'DEV' && ( 
               <PainelDesenvolvedor 
                 api={api}
