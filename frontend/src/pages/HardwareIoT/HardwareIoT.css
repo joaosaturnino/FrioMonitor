@@ -1,141 +1,335 @@
 /* =========================================
-   HardwareIoT.css - Gestão de Frota Edge
+   HardwareIoT.css - Inventário Edge (SaaS)
    ========================================= */
 
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Montserrat:wght@400;600;800;900&display=swap');
+
+/* --- ANIMAÇÕES GLOBAIS --- */
+@keyframes fadeInOS {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin-slow {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.spin {
+    animation: spin-slow 1.2s linear infinite;
+}
+
+/* Animação dos LEDs Físicos */
+@keyframes blink-led-green {
+
+    0%,
+    100% {
+        box-shadow: 0 0 8px #10b981, inset 0 0 5px #10b981;
+        opacity: 1;
+    }
+
+    50% {
+        box-shadow: 0 0 2px #10b981, inset 0 0 2px #10b981;
+        opacity: 0.6;
+    }
+}
+
+@keyframes blink-led-red {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px #ef4444, inset 0 0 5px #ef4444;
+        opacity: 1;
+    }
+
+    50% {
+        box-shadow: 0 0 2px #ef4444, inset 0 0 2px #ef4444;
+        opacity: 0.4;
+    }
+}
+
+@keyframes scanline {
+    0% {
+        transform: translateY(-100%);
+    }
+
+    100% {
+        transform: translateY(100%);
+    }
+}
+
+.hardware-wrapper {
+    animation: fadeInOS 0.4s ease-out;
+    padding-bottom: 2rem;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* --- HEADER & TOOLBAR --- */
 .edge-header-actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 1.5rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 2rem;
 }
 
-.search-box-edge {
+.edge-title-modern {
+    margin: 0;
     display: flex;
     align-items: center;
-    background: rgba(0, 0, 0, 0.05);
+    gap: 12px;
+    font-weight: 900;
+    font-size: 1.4rem;
+    color: white;
+    letter-spacing: -0.5px;
+}
+
+.icon-box-primary {
+    background: linear-gradient(135deg, var(--primary), #059669);
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.search-modern {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.3);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px 14px;
-    min-width: 300px;
+    border-radius: 12px;
+    padding: 10px 16px;
+    width: 100%;
+    max-width: 380px;
     transition: all 0.3s ease;
 }
 
-.dark-theme .search-box-edge {
-    background: rgba(255, 255, 255, 0.03);
+.search-modern:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+    background: rgba(15, 23, 42, 0.8);
 }
 
-.search-box-edge:focus-within {
-    background: var(--card-bg);
-    border-color: var(--secondary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--secondary) 20%, transparent);
-}
-
-.search-box-edge input {
+.search-modern input {
     border: none;
     background: transparent;
     width: 100%;
-    padding: 0 10px;
-    color: var(--text-main);
+    padding-left: 12px;
+    color: white;
     outline: none;
-    font-size: 0.9rem;
+    font-weight: 600;
+    font-size: 0.95rem;
 }
 
-/* KPI BAR */
+/* --- KPI CARDS (GLASSMORPHISM) --- */
 .edge-kpi-bar {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1.5rem;
-    margin: 1.5rem 0;
+    margin-bottom: 2rem;
 }
 
-/* CARDS */
-.iot-fleet-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1rem;
-}
-
-.iot-node-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
+.kpi-card-modern {
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
     padding: 1.5rem;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    border-left: 4px solid var(--border);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kpi-card-modern:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6);
+}
+
+.kpi-card-modern.info {
+    border-left-color: #38bdf8;
+}
+
+.kpi-card-modern.success {
+    border-left-color: var(--success);
+}
+
+.kpi-card-modern.danger {
+    border-left-color: var(--danger);
+}
+
+.kpi-text-box {
     display: flex;
     flex-direction: column;
 }
 
-.iot-node-card:hover {
-    border-color: var(--secondary);
-    transform: translateY(-4px);
-    box-shadow: 0 15px 30px -5px rgba(56, 189, 248, 0.15);
+.kpi-value-modern {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: white;
+    line-height: 1.1;
+    font-family: 'JetBrains Mono', monospace;
 }
 
-/* Fio de cor de topo para status */
+.kpi-label-modern {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- NODE CARDS (IOT DEVICES) --- */
+.iot-fleet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 1.5rem;
+}
+
+.iot-node-card {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fundo com grelha de pontos de engenharia */
 .iot-node-card::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
+    bottom: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 15px 15px;
+    pointer-events: none;
+    z-index: 0;
 }
 
-.iot-node-card.card-online::before {
-    background: var(--success);
+.iot-node-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
-.iot-node-card.card-offline::before {
-    background: var(--danger);
+.iot-node-card.card-online {
+    border-top: 4px solid #10b981;
+}
+
+.iot-node-card.card-offline {
+    border-top: 4px solid #ef4444;
+    opacity: 0.85;
+    filter: grayscale(40%);
 }
 
 .node-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding-bottom: 15px;
-    margin-bottom: 15px;
+    position: relative;
+    z-index: 2;
 }
 
 .node-ident {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
 }
 
-.node-icon {
-    padding: 10px;
-    background: color-mix(in srgb, var(--secondary) 15%, transparent);
-    color: var(--secondary);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Brilho no ícone CPU */
+.hw-icon {
+    transition: all 0.3s ease;
+}
+
+.card-online .hw-icon {
+    color: #10b981;
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
+}
+
+.card-offline .hw-icon {
+    color: #ef4444;
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.5));
 }
 
 .node-name {
-    font-weight: 800;
+    font-weight: 900;
     font-size: 1.1rem;
-    color: var(--text-main);
-    margin-bottom: 2px;
+    color: white;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.5px;
+}
+
+.node-location {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+    font-weight: 800;
+}
+
+/* Status Badge e LED Físico */
+.node-status-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.status-led {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #334155;
+}
+
+.status-led.led-online {
+    background: #10b981;
+    animation: blink-led-green 2s infinite;
+}
+
+.status-led.led-offline {
+    background: #ef4444;
+    animation: blink-led-red 1s infinite;
 }
 
 .node-status {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.75rem;
-    font-weight: 800;
-    padding: 4px 12px;
-    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 4px 10px;
+    border-radius: 6px;
     letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
 .status-online {
@@ -150,72 +344,105 @@
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+/* --- SPECS GRID --- */
 .node-specs {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    flex: 1;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    z-index: 2;
 }
 
 .spec-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 }
 
 .spec-label {
     color: var(--text-muted);
     font-size: 0.65rem;
-    font-family: var(--font-family);
     text-transform: uppercase;
     font-weight: 800;
     letter-spacing: 0.5px;
 }
 
 .spec-value {
-    color: var(--text-main);
-    font-weight: 700;
-    background: rgba(0, 0, 0, 0.03);
-    padding: 4px 8px;
-    border-radius: 6px;
-    display: inline-block;
-    width: fit-content;
-}
-
-.dark-theme .spec-value {
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.wifi-signal {
+    color: white;
+    font-weight: 900;
+    font-size: 0.85rem;
+    font-family: 'JetBrains Mono', monospace;
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
-.signal-excellent {
-    color: var(--success);
+/* Gráfico de Sinal Wi-Fi Simulando Barras Físicas */
+.wifi-bars-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
 }
 
-.signal-good {
-    color: var(--secondary);
+.wifi-bar {
+    width: 4px;
+    background: #334155;
+    border-radius: 1px;
+    transition: background 0.3s ease;
 }
 
-.signal-weak {
-    color: var(--warning);
+.wifi-bar:nth-child(1) {
+    height: 4px;
 }
 
-.signal-bad {
-    color: var(--danger);
+.wifi-bar:nth-child(2) {
+    height: 7px;
 }
 
+.wifi-bar:nth-child(3) {
+    height: 10px;
+}
+
+.wifi-bar:nth-child(4) {
+    height: 14px;
+}
+
+.signal-excellent .wifi-bar {
+    background: #10b981;
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.4);
+}
+
+.signal-good .wifi-bar:not(:nth-child(4)) {
+    background: #f59e0b;
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.4);
+}
+
+.signal-weak .wifi-bar:nth-child(1),
+.signal-weak .wifi-bar:nth-child(2) {
+    background: #f59e0b;
+}
+
+.signal-bad .wifi-bar:nth-child(1) {
+    background: #ef4444;
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.4);
+}
+
+.signal-offline .wifi-bar {
+    background: #334155;
+}
+
+/* --- AÇÕES (BOTÕES) --- */
 .node-actions {
     display: flex;
     gap: 10px;
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid var(--border);
+    margin-top: auto;
+    position: relative;
+    z-index: 2;
 }
 
 .btn-node {
@@ -223,37 +450,81 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 10px;
-    border-radius: 8px;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 10px;
     font-size: 0.75rem;
-    font-weight: 800;
+    font-weight: 900;
     border: none;
     cursor: pointer;
     transition: all 0.2s;
     letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-family: 'Montserrat', sans-serif;
 }
 
 .btn-reboot {
-    background: rgba(245, 158, 11, 0.1);
-    color: var(--warning);
-    border: 1px solid rgba(245, 158, 11, 0.3);
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.btn-reboot:hover {
-    background: var(--warning);
+.btn-reboot:hover:not(:disabled) {
+    background: var(--danger);
     color: white;
     transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
 }
 
 .btn-ota {
     background: rgba(56, 189, 248, 0.1);
-    color: var(--secondary);
+    color: #38bdf8;
     border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
-.btn-ota:hover {
-    background: var(--secondary);
+.btn-ota:hover:not(:disabled) {
+    background: #38bdf8;
     color: white;
     transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4);
+}
+
+.btn-node:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Efeito de Overlay de Loading no Cartão inteiro */
+.node-overlay-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    color: var(--primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 0.85rem;
+}
+
+.node-overlay-loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 10%;
+    background: linear-gradient(to bottom, rgba(56, 189, 248, 0.4), transparent);
+    animation: scanline 2s linear infinite;
+    pointer-events: none;
 }

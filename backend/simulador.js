@@ -173,7 +173,7 @@ async function executarSimulacao() {
 
 async function iniciarLoopSeguro() {
   await executarSimulacao();
-  setTimeout(iniciarLoopSeguro, tokenAtivo ? INTERVALO_TELEMETRIA : 5000);
+  setTimeout(iniciarLoopSeguro, tokenAtivo ? INTERVALO_TELEMETRIA : 60000);
 }
 
 iniciarLoopSeguro();

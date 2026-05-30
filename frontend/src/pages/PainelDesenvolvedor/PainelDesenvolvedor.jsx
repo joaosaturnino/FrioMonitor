@@ -1,68 +1,63 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
-  ShieldAlert, Zap, Database, Cpu, Eye, EyeOff as EyeClosed, Power,
-  Settings2, Activity, Globe, Lock, Wrench, Server, Droplets, Archive,
-  History, Store, Sliders, ToggleLeft, ToggleRight, FileOutput, Volume2,
-  Wifi, MessageSquareOff, Users, Eraser, CreditCard, CheckCircle2, AlertTriangle,
-  Building2, BrainCircuit, ActivitySquare, Network, Receipt, TrendingUp,
-  DownloadCloud, DollarSign, Send, FileText, Banknote, Calendar, Percent, Cloud,
-  ChevronUp, ChevronDown, Terminal, RefreshCw, Mail, ShieldX, Key, UserCheck, LineChart,
-  ShieldCheck, Fingerprint, UserX, MapPin, Clock, PieChart, FileSpreadsheet // Ícones adicionados
+  ShieldAlert, Database, Cpu, Power, Settings2, Activity, Globe, 
+  Server, History, Store, ToggleLeft, ToggleRight, FileOutput, FileText, 
+  Send, DollarSign, Building2, ActivitySquare, Terminal, RefreshCw, Mail, 
+  ShieldX, Key, UserCheck, LineChart, ShieldCheck, Fingerprint as FingerprintIcon, 
+  UserX, MapPin, Clock, PieChart, FileSpreadsheet, Lock, Unlock, CheckCircle2, 
+  AlertTriangle, TrendingUp, DownloadCloud, Calendar, Percent, Banknote, 
+  Eraser, Network, Copy, Check, AlertOctagon, TerminalSquare, Loader2, 
+  ChevronDown, ChevronUp, Receipt, Cloud, HardDrive, Radio, ServerCrash, ZapOff, Sliders
 } from 'lucide-react';
-import { AreaChart, Area, XAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, YAxis } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './PainelDesenvolvedor.css';
-
 import GestaoEmpresas from '../GestaoEmpresas/GestaoEmpresas';
 
+// ============================================================================
+// 1. TELA DE BOOT (HACKER SCREEN)
+// ============================================================================
 const BootScreen = ({ onComplete }) => {
   const [logs, setLogs] = useState([]);
   const [showInput, setShowInput] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  
   const inputRef = useRef(null);
   const bottomRef = useRef(null);
 
-  useEffect(() => {
-    if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: "smooth" });
-  }, [logs, showInput]);
+  useEffect(() => { if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: "smooth" }); }, [logs, showInput]);
 
   useEffect(() => {
     let isMounted = true;
     const sleep = ms => new Promise(r => setTimeout(r, ms));
-    const genHex = () => Math.random().toString(16).substring(2, 10).toUpperCase();
+    const genHex = () => Math.random().toString(16).substring(2, 12).toUpperCase();
 
     const runBootSequence = async () => {
       const sequence = [
-        { text: "TermoSync BIOS (C) 2026 TermoSync Corp. NOC Division", delay: 200, color: '#94a3b8' },
-        { text: "CPU: AMD EPYC 9754 128-Core Processor", delay: 100 },
-        { text: "Memory: 1048576 MB RAM - OK", delay: 50 },
-        { text: "Loading kernel TermoSync OS v10.5 Enterprise...", delay: 300 }
+        { text: "TermoSync Enterprise OS [Build 10.5.22621 - TCC Edition]", delay: 100, color: '#94a3b8' },
+        { text: "(c) TermoSync Corporation. NOC & SysAdmin Core.", delay: 100, color: '#94a3b8' },
+        { text: " ", delay: 100 },
+        { text: "Initializing Core Processors...", delay: 200 },
+        { text: "CPU: AMD EPYC 9754 128-Core Processor @ 3.2GHz", delay: 100 },
+        { text: "Memory: 1048576 MB RAM - SECURE ECC VERIFIED", delay: 50 },
+        { text: "Scanning local network for edge devices (IoT)...", delay: 300 }
       ];
 
-      for (let i = 0; i < 25; i++) {
-        sequence.push({ 
-          text: `[ ${(Math.random() * 2).toFixed(6)}] Loading module 0x${genHex()}... OK`, 
-          delay: 10 + Math.random() * 15, 
-          color: '#475569' 
-        });
+      for (let i = 0; i < 8; i++) {
+        sequence.push({ text: `[${(Math.random() * 2).toFixed(4)}] Node [MAC: A4:CF:12:${genHex().substring(0,2)}:${genHex().substring(0,2)}:${genHex().substring(0,2)}] Handshake... OK`, delay: 20 + Math.random() * 30, color: '#475569' });
       }
 
       sequence.push(
-        { text: "[  OK  ] Initializing hardware watchdogs...", delay: 150 },
-        { text: "Establishing uplink to core servers... [ 104.28.192.12 ]", delay: 250 },
-        { text: "[  OK  ] Handshake accepted. Tunnel secured.", delay: 100, color: '#10b981' },
-        { text: "Loading user profile DEV_ROOT...", delay: 200 },
+        { text: "[  OK  ] Hardware watchdogs engaged.", delay: 150 },
+        { text: "Establishing secure WSS uplink to master cluster... [ 104.28.192.12 ]", delay: 250 },
+        { text: "[  OK  ] Uplink established. TLS 1.3 Tunnel encrypted.", delay: 100, color: '#10b981' },
+        { text: "Mounting Multi-Tenant MySQL Volumes...", delay: 200 },
         { text: "Decrypting master access tokens (AES-256): [████████████████████] 100%", delay: 350 },
-        { text: "[  OK  ] Token decrypted.", delay: 100, color: '#10b981' },
-        { text: "Mounting Multi-Tenant Database Clusters...", delay: 250 },
-        { text: "Waking NOC (Network Operations Center) daemons...", delay: 200 },
+        { text: "Waking Network Operations Center (NOC) daemons...", delay: 200 },
         { text: "[ WARN ] SUPERVISOR MODE ACTIVATED.", delay: 400, color: '#eab308', isBold: true },
-        { text: "[ WARN ] IDS ENGAGING LOCKDOWN PROTOCOL.", delay: 300, color: '#ef4444', isBold: true },
-        { text: "SYSTEM RESTRICTED.", delay: 200, color: '#ef4444', isBold: true },
-        { text: "ROOT IDENTIFICATION REQUIRED TO PROCEED.", delay: 150, color: '#cbd5e1', isBold: true }
+        { text: "[ WARN ] IDS ENGAGING ZERO-TRUST PROTOCOL.", delay: 300, color: '#ef4444', isBold: true },
+        { text: "SYSTEM RESTRICTED. ROOT IDENTIFICATION REQUIRED.", delay: 150, color: '#cbd5e1', isBold: true }
       );
 
       for (let i = 0; i < sequence.length; i++) {
@@ -70,7 +65,6 @@ const BootScreen = ({ onComplete }) => {
         await sleep(sequence[i].delay);
         setLogs(prev => [...prev, sequence[i]]);
       }
-
       if (isMounted) setShowInput(true);
     };
 
@@ -83,32 +77,29 @@ const BootScreen = ({ onComplete }) => {
   const handleAuth = async (e) => {
     e.preventDefault();
     if (!passcode.trim() || isProcessing) return;
-    
     setIsProcessing(true);
     setShowInput(false);
     
-    const secretKey = "root";
     const typed = passcode;
     setPasscode('');
-    
-    setLogs(prev => [...prev, { text: `root@termosync:~$ ${typed}`, color: 'var(--primary)' }]);
+    setLogs(prev => [...prev, { text: `root@termosync:~$ ${typed.replace(/./g, '*')}`, color: '#10b981' }]);
     
     await new Promise(r => setTimeout(r, 400));
     setLogs(prev => [...prev, { text: "Verifying cryptographic signature...", color: '#94a3b8' }]);
     
     await new Promise(r => setTimeout(r, 600));
     
-    if (typed.toLowerCase() === secretKey) {
-      setLogs(prev => [...prev, { text: "Compiling hash [0x9A4B...21F] -> MATCH", color: '#10b981' }]);
+    if (typed.toLowerCase() === 'root') {
+      setLogs(prev => [...prev, { text: "Hash [0x9A4B...21F] -> MATCH", color: '#10b981' }]);
       await new Promise(r => setTimeout(r, 300));
       setLogs(prev => [...prev, { text: "[  OK  ] AUTHENTICATION SUCCESSFUL.", color: '#10b981', isBold: true }]);
-      setLogs(prev => [...prev, { text: "Unlocking SaaS modules and root privileges...", color: '#94a3b8' }]);
+      setLogs(prev => [...prev, { text: "Unlocking SaaS modules and elevating privileges...", color: '#94a3b8' }]);
       await new Promise(r => setTimeout(r, 800));
       onComplete();
     } else {
-      setLogs(prev => [...prev, { text: "Compiling hash [0x9A4B...21F] -> MISMATCH", color: '#ef4444' }]);
+      setLogs(prev => [...prev, { text: "Hash [0x9A4B...21F] -> MISMATCH", color: '#ef4444' }]);
       await new Promise(r => setTimeout(r, 300));
-      setLogs(prev => [...prev, { text: "[ FAIL ] ACCESS DENIED. INTRUSION ATTEMPT LOGGED.", color: '#ef4444', isBold: true }]);
+      setLogs(prev => [...prev, { text: "[ FAIL ] ACCESS DENIED. INCIDENT LOGGED IN SOC.", color: '#ef4444', isBold: true }]);
       await new Promise(r => setTimeout(r, 500));
       setShowInput(true);
       setIsProcessing(false);
@@ -117,41 +108,18 @@ const BootScreen = ({ onComplete }) => {
 
   return (
     <div className="root-boot-screen" onClick={() => { if (showInput) inputRef.current?.focus(); }}>
-      <div className="boot-terminal">
-        <div style={{ color: '#94a3b8', marginBottom: '15px', zIndex: 3 }}>
-          TermoSync Core OS [Build 10042]<br />
-          (c) TermoSync Corp. Todos os direitos reservados.
-        </div>
-
+      <div className="boot-terminal-box crt-terminal">
         {logs.map((log, index) => (
-          <div key={index} className="boot-log" style={{ color: log.color || '#cbd5e1', fontWeight: log.isBold ? 'bold' : 'normal' }}>
-            {log.text.startsWith('root@') ? log.text : log.text}
+          <div key={index} className="boot-log" style={{ color: log.color || '#cbd5e1', fontWeight: log.isBold ? 'bold' : 'normal', textShadow: log.color === '#10b981' ? '0 0 5px rgba(16,185,129,0.3)' : 'none' }}>
+            {log.text}
           </div>
         ))}
-
         {showInput && (
-          <form onSubmit={handleAuth} style={{ display: 'flex', marginTop: '5px', zIndex: 3 }}>
-            <span style={{ color: 'var(--primary)', marginRight: '8px' }}>root@termosync:~$</span>
-            <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
-              <input 
-                ref={inputRef} 
-                type="password" 
-                value={passcode} 
-                onChange={e => setPasscode(e.target.value)} 
-                style={{ 
-                  background: 'transparent', 
-                  border: 'none', 
-                  color: 'white', 
-                  outline: 'none', 
-                  fontFamily: 'inherit', 
-                  fontSize: 'inherit', 
-                  width: '100%',
-                  caretColor: 'transparent'
-                }} 
-                autoComplete="off" 
-                disabled={isProcessing}
-              />
-              <span className="boot-cursor-blink" style={{ position: 'absolute', left: `${passcode.length * 8.5}px`, top: '1px' }}></span>
+          <form onSubmit={handleAuth} className="boot-form">
+            <span className="boot-prompt">root@termosync:~$</span>
+            <div className="boot-input-wrapper">
+              <input ref={inputRef} type="password" value={passcode} onChange={e => setPasscode(e.target.value)} className="boot-input" autoComplete="off" disabled={isProcessing} />
+              <span className="boot-cursor-blink" style={{ left: `${passcode.length * 9.5}px` }}></span>
             </div>
           </form>
         )}
@@ -161,182 +129,532 @@ const BootScreen = ({ onComplete }) => {
   );
 };
 
+// ============================================================================
+// 2. PAINEL PRINCIPAL (OS)
+// ============================================================================
 export default function PainelDesenvolvedor({ api, abaAtiva, isDevAuthenticated, onAuthenticate, showToast, sysConfig, updateSysConfig, tocarAlarme, usuariosLista, filiaisDb, setModalConfig }) {
   const [terminalLogs, setTerminalLogs] = useState([]);
-  const addLog = useCallback((text, status = 'info') => { setTerminalLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), text, status }]); }, []);
+  
+  const addLog = useCallback((text, status = 'info') => { 
+    setTerminalLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text, status }]); 
+  }, []);
 
   if (!isDevAuthenticated) {
-    return <BootScreen onComplete={() => { onAuthenticate(); addLog("Sessão Master estabelecida. Controle absoluto liberado.", "success"); }} />;
+    return <BootScreen onComplete={() => { onAuthenticate(); addLog("Sessão Master estabelecida. SysAdmin conectado.", "success"); }} />;
   }
 
   return (
-    <div className="dev-os-container anim-fade-in">
+    <div className={`dev-os-container anim-fade-in ${sysConfig?.maintenanceMode ? 'lockdown-mode' : ''}`}>
+      {sysConfig?.maintenanceMode && (
+        <div className="maintenance-banner">
+          <AlertOctagon size={18} className="pulse-icon" /> SISTEMA EM MODO DE MANUTENÇÃO (OFFLINE) <AlertOctagon size={18} className="pulse-icon" />
+        </div>
+      )}
       <div className="dev-os-workspace">
         <div className="dev-os-content">
-          {abaAtiva === 'empresas' && <GestaoEmpresas api={api} showToast={showToast} setModalConfig={setModalConfig} />}
-          {abaAtiva === 'dev_panel' && <TelaNOC showToast={showToast} sysConfig={sysConfig} updateSysConfig={updateSysConfig} tocarAlarme={tocarAlarme} usuariosLista={usuariosLista} addLog={addLog} />}
-          {abaAtiva === 'saas' && <TelaSaaS api={api} sysConfig={sysConfig} updateSysConfig={updateSysConfig} filiaisDb={filiaisDb} showToast={showToast} addLog={addLog} />}
-          {abaAtiva === 'billing' && <TelaBilling sysConfig={sysConfig} filiaisDb={filiaisDb} showToast={showToast} addLog={addLog} updateSysConfig={updateSysConfig} />}
-          {abaAtiva === 'system' && <TelaSistema api={api} showToast={showToast} addLog={addLog} sysConfig={sysConfig} updateSysConfig={updateSysConfig} />}
-          {abaAtiva === 'soc' && <TelaSOC api={api} showToast={showToast} addLog={addLog} />}
+          {/* NOC TACTICAL GRID OVERLAY */}
+          {abaAtiva === 'dev_panel' && <div className="noc-cyber-grid"></div>}
           
-          {/* TelaBI agora recebendo sysConfig e filiaisDb para os dados reais de billing */}
-          {abaAtiva === 'bi' && <TelaBI api={api} showToast={showToast} addLog={addLog} sysConfig={sysConfig} filiaisDb={filiaisDb} />}
+          {abaAtiva === 'empresas' && <GestaoEmpresas api={api} showToast={showToast} setModalConfig={setModalConfig} />}
+          {abaAtiva === 'dev_panel' && <TelaNOC api={api} showToast={showToast} sysConfig={sysConfig} updateSysConfig={updateSysConfig} tocarAlarme={tocarAlarme} usuariosLista={usuariosLista} addLog={addLog} setModalConfig={setModalConfig} />}
+          {abaAtiva === 'saas' && <TelaSaaS api={api} sysConfig={sysConfig} updateSysConfig={updateSysConfig} filiaisDb={filiaisDb} showToast={showToast} addLog={addLog} setModalConfig={setModalConfig} />}
+          {abaAtiva === 'billing' && <TelaBilling sysConfig={sysConfig} filiaisDb={filiaisDb} showToast={showToast} addLog={addLog} updateSysConfig={updateSysConfig} setModalConfig={setModalConfig} />}
+          {abaAtiva === 'system' && <TelaSistema api={api} showToast={showToast} addLog={addLog} sysConfig={sysConfig} updateSysConfig={updateSysConfig} setModalConfig={setModalConfig} />}
+          {abaAtiva === 'soc' && <TelaSOC api={api} showToast={showToast} addLog={addLog} setModalConfig={setModalConfig} />}
+          {abaAtiva === 'bi' && <TelaBI api={api} showToast={showToast} addLog={addLog} sysConfig={sysConfig} filiaisDb={filiaisDb} setModalConfig={setModalConfig} />}
         </div>
-        <TerminalFooter logs={terminalLogs} setLogs={setTerminalLogs} addLog={addLog} filiaisDb={filiaisDb} />
+        <TerminalFooter logs={terminalLogs} setLogs={setTerminalLogs} addLog={addLog} sysConfig={sysConfig} />
       </div>
     </div>
   );
 }
 
-const TelaNOC = ({ showToast, sysConfig, updateSysConfig, tocarAlarme, usuariosLista, addLog }) => {
+// ============================================================================
+// 3. TELA NOC (DASHBOARD GRAFANA/DATADOG STYLE - GOD TIER V2)
+// ============================================================================
+const TelaNOC = ({ api, showToast, sysConfig, updateSysConfig, usuariosLista, addLog }) => {
   const [scopeType, setScopeType] = useState('ROLE');
   const [activeScope, setActiveScope] = useState('GLOBAL');
-  const [metrics, setMetrics] = useState({ cpu: 12, ram: 42, ping: 14, reqs: 342 });
+  
+  const [metrics, setMetrics] = useState({ cpu: 12, ram: 42, ping: 14, reqs: 342, dbQps: 154, bandwidth: 24.5 });
+  const [metricHistory, setMetricHistory] = useState(Array.from({ length: 20 }, () => ({ time: '', cpu: 0, ram: 0, bw: 0, db: 0 })));
   const [apiTraffic, setApiTraffic] = useState([]);
   const [threats, setThreats] = useState([]);
+  const [clusterNodes, setClusterNodes] = useState([
+    { id: 1, name: 'sa-east-1a (Master)', role: 'Primary DB & Node', status: 'online', ping: 12 },
+    { id: 2, name: 'sa-east-1b (Replica)', role: 'Read Replica', status: 'online', ping: 14 },
+    { id: 3, name: 'us-east-1 (Failover)', role: 'Disaster Recovery', status: 'standby', ping: 118 },
+    { id: 4, name: 'redis-cache-tier', role: 'In-Memory Cache', status: 'online', ping: 2 }
+  ]);
+
   const trafficContainerRef = useRef(null);
+  const wafContainerRef = useRef(null);
+  const [uptimeStr, setUptimeStr] = useState('--:--:--');
+  const [serverStartTime, setServerStartTime] = useState(null);
+
+  // Busca Uptime Real do Node.js
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRealUptime = async () => {
+      try {
+        const res = await api.get('/system/health');
+        if (isMounted && res.data && res.data.uptime !== undefined) {
+          setServerStartTime(Date.now() - (res.data.uptime * 1000));
+        }
+      } catch (e) {
+        if (isMounted) setUptimeStr('OFFLINE');
+      }
+    };
+    fetchRealUptime();
+    const syncInterval = setInterval(fetchRealUptime, 30000);
+    return () => { isMounted = false; clearInterval(syncInterval); };
+  }, [api]);
 
   useEffect(() => {
-    const i1 = setInterval(() => setMetrics({ cpu: Math.floor(Math.random() * 15) + 5, ram: Math.floor(Math.random() * 20) + 40, ping: Math.floor(Math.random() * 8) + 10, reqs: Math.floor(Math.random() * 100) + 300 }), 2000);
+    if (!serverStartTime) return;
+    const iUptime = setInterval(() => {
+      const diff = Math.floor((Date.now() - serverStartTime) / 1000);
+      const d = Math.floor(diff / 86400);
+      const h = String(Math.floor((diff % 86400) / 3600)).padStart(2, '0');
+      const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+      const s = String(diff % 60).padStart(2, '0');
+      if (d > 0) setUptimeStr(`${d}d ${h}:${m}:${s}`);
+      else setUptimeStr(`${h}:${m}:${s}`);
+    }, 1000);
+    return () => clearInterval(iUptime);
+  }, [serverStartTime]);
+
+  // Motores de Simulação do NOC Visual
+  useEffect(() => {
+    const i1 = setInterval(() => {
+      if(sysConfig.maintenanceMode) {
+        setMetrics({ cpu: 1, ram: 15, ping: 5, reqs: 0, dbQps: 0, bandwidth: 0 });
+        setMetricHistory(prev => [...prev.slice(1), { time: new Date().toLocaleTimeString('pt-BR', { second: '2-digit' }), cpu: 1, ram: 15, bw: 0, db: 0 }]);
+        return;
+      }
+      const newCpu = Math.floor(Math.random() * 20) + 15;
+      const newRam = Math.floor(Math.random() * 10) + 60;
+      const newReqs = Math.floor(Math.random() * 150) + 400;
+      const newDb = Math.floor(Math.random() * 50) + 100;
+      const newBw = (Math.random() * 10 + 15).toFixed(1);
+      
+      setMetrics({ cpu: newCpu, ram: newRam, ping: Math.floor(Math.random() * 8) + 10, reqs: newReqs, dbQps: newDb, bandwidth: newBw });
+      setMetricHistory(prev => [...prev.slice(1), { time: new Date().toLocaleTimeString('pt-BR', { second: '2-digit' }), cpu: newCpu, ram: newRam, bw: newBw, db: newDb }]);
+      
+      setClusterNodes(prev => prev.map(n => ({ ...n, ping: n.status === 'standby' ? Math.floor(Math.random() * 20) + 110 : Math.floor(Math.random() * 10) + 5 })));
+    }, 2000);
+
     const i2 = setInterval(() => {
-      const rotas = ['GET /api/leituras', 'POST /api/telemetry', 'WSS /socket.io/stream', 'PUT /api/notificacoes'];
-      const newTraffic = `[200 OK] ${rotas[Math.floor(Math.random() * rotas.length)]} - 192.168.1.${Math.floor(Math.random() * 255)} - ${Math.floor(Math.random() * 20)}ms`;
-      setApiTraffic(prev => [...prev.slice(-10), { id: Date.now() + Math.random(), text: newTraffic }]);
-    }, 600);
+      if(sysConfig.maintenanceMode) return;
+      const rotas = [
+        { method: 'GET', route: '/api/v1/telemetry/sync', color: '#10b981', status: '200 OK' }, 
+        { method: 'POST', route: '/api/v1/auth/verify', color: '#f59e0b', status: '201 CREATED' }, 
+        { method: 'WSS', route: '/ws/stream/events', color: '#a855f7', status: '101 SWITCH' }, 
+        { method: 'GET', route: '/api/v1/assets/img', color: '#38bdf8', status: '304 CACHE' }
+      ];
+      const r = rotas[Math.floor(Math.random() * rotas.length)];
+      setApiTraffic(prev => [...prev.slice(-30), { id: Date.now() + Math.random(), method: r.method, color: r.color, route: r.route, status: r.status, ip: `192.168.${Math.floor(Math.random()*10)}.${Math.floor(Math.random() * 255)}`, ms: Math.floor(Math.random() * 40)+5 }]);
+    }, 350);
 
     const i3 = setInterval(() => {
-      const ataques = ['SQL Injection', 'DDoS Attempt', 'Brute Force', 'XSS Payload'];
+      if(sysConfig.maintenanceMode) return;
+      const ataques = ['SQL_INJECTION', 'DDOS_SYN_FLOOD', 'BRUTE_FORCE_JWT', 'PATH_TRAVERSAL'];
       const ips = [`45.33.${Math.floor(Math.random() * 255)}.12`, `188.166.${Math.floor(Math.random() * 255)}.55`, `104.28.${Math.floor(Math.random() * 255)}.1`];
-      const atk = `[BLOCK] ${ataques[Math.floor(Math.random() * ataques.length)]} detectado do IP ${ips[Math.floor(Math.random() * ips.length)]}`;
-      setThreats(prev => [...prev.slice(-4), { id: Date.now(), text: atk }]);
-    }, 3500);
+      const atk = `[IDS BLOCK] SIG_MATCH: ${ataques[Math.floor(Math.random() * ataques.length)]} -> DROP PKT from ${ips[Math.floor(Math.random() * ips.length)]}`;
+      setThreats(prev => [...prev.slice(-15), { id: Date.now(), text: atk }]);
+    }, 4500);
 
     return () => { clearInterval(i1); clearInterval(i2); clearInterval(i3); };
-  }, []);
+  }, [sysConfig.maintenanceMode]);
 
   useEffect(() => { if (trafficContainerRef.current) trafficContainerRef.current.scrollTop = trafficContainerRef.current.scrollHeight; }, [apiTraffic]);
+  useEffect(() => { if (wafContainerRef.current) wafContainerRef.current.scrollTop = wafContainerRef.current.scrollHeight; }, [threats]);
   useEffect(() => { if (scopeType === 'ROLE') setActiveScope('GLOBAL'); else setActiveScope(usuariosLista?.[0]?.usuario || ''); }, [scopeType, usuariosLista]);
 
   const regrasAtivas = (scopeType === 'USER' ? sysConfig?.regras?.USERS?.[activeScope] : sysConfig?.regras?.[activeScope]) || { modulosOcultos: [], features: {} };
-
-  const handleToggleModulo = (id) => { updateSysConfig(scopeType, activeScope, 'modulosOcultos', id); addLog(`Módulo '${id}' alterado.`, 'warning'); };
-  const handleToggleFeature = (key) => { updateSysConfig(scopeType, activeScope, 'features', key, !(regrasAtivas?.features?.[key] ?? true)); addLog(`Política '${key}' atualizada.`, 'warning'); };
-  const handleMaintenance = () => { const s = !sysConfig.maintenanceMode; updateSysConfig('ROLE', null, 'maintenanceMode', null, s); addLog(`Lockdown = ${s}.`, s ? 'error' : 'success'); showToast('Bloqueio alterado.', s ? 'warning' : 'success'); };
+  const handleToggleModulo = (id) => { updateSysConfig(scopeType, activeScope, 'modulosOcultos', id); addLog(`[UI_MATRIX] Módulo '${id}' reconfigurado.`, 'warning'); };
+  const handleToggleFeature = (key) => { updateSysConfig(scopeType, activeScope, 'features', key, !(regrasAtivas?.features?.[key] ?? true)); addLog(`[API_FLAG] Política '${key}' alterada.`, 'warning'); };
 
   const TODOS_MODULOS = [
-    { id: 'dashboard', nome: 'Dashboard' }, 
-    { id: 'mapa', nome: 'Planta Digital (Heatmap)' }, 
-    { id: 'motores', nome: 'Motores Térmicos' }, 
-    { id: 'umidade', nome: 'Umidade Relativa' },
-    { id: 'kanban', nome: 'Quadro Kanban (OS)' }, 
-    { id: 'metrologia', nome: 'Metrologia (ANVISA)' },
-    { id: 'equipamentos', nome: 'Máquinas (IoT)' }, 
-    { id: 'parametros', nome: 'Parâmetros Core' }, 
-    { id: 'chamados', nome: 'Ordens (OS)' },
-    { id: 'historico_chamados', nome: 'Arquivo de OS' }, 
-    { id: 'chat', nome: 'Chat' }, 
-    { id: 'relatorios', nome: 'Relatórios ESG' },
-    { id: 'historico', nome: 'Auditoria Logs' }, 
-    { id: 'lojas', nome: 'Lojas da Rede' }, 
-    { id: 'usuarios', nome: 'Identidades (AD)' },
-    { id: 'simulador', nome: 'Simulador IoT' }, 
-    { id: 'hardware', nome: 'Frota Edge (IoT)' },
-    { id: 'system', nome: 'Governança Global' },
-    { id: 'soc', nome: 'Segurança (SOC)' }, 
-    { id: 'sobre', nome: 'Sobre a Plataforma' }
+    { id: 'dashboard', nome: 'Dashboard Operacional' }, { id: 'mapa', nome: 'Planta Digital (Heatmap)' }, 
+    { id: 'motores', nome: 'Monitoramento Térmico' }, { id: 'umidade', nome: 'Monitoramento Umidade' },
+    { id: 'kanban', nome: 'Gestão Ágil (Kanban)' }, { id: 'metrologia', nome: 'Controle Metrológico' }, 
+    { id: 'equipamentos', nome: 'Máquinas (Hardware IoT)' }, { id: 'chamados', nome: 'Gestão de Incidentes' }, 
+    { id: 'relatorios', nome: 'Relatórios Executivos' }, { id: 'historico', nome: 'Auditoria de Logs' }, 
+    { id: 'lojas', nome: 'Gestão de Lojas' }, { id: 'usuarios', nome: 'Identidades e Acessos' },
+    { id: 'simulador', nome: 'Simulador Edge' }
   ];
 
+  // Cálculo Defcon WAF
+  const defconLevel = threats.length > 10 ? 'CRITICAL' : (threats.length > 5 ? 'ELEVATED' : 'SECURE');
+  const defconColor = defconLevel === 'CRITICAL' ? '#ef4444' : (defconLevel === 'ELEVATED' ? '#f59e0b' : '#10b981');
+
+  // Mini-Sparklines componentizados para os cards do HUD
+  const RenderSparkline = ({ dataKey, color }) => (
+    <div className="sparkline-container">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={metricHistory}>
+          <defs><linearGradient id={`color_${dataKey}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={color} stopOpacity={0.6}/><stop offset="95%" stopColor={color} stopOpacity={0}/></linearGradient></defs>
+          <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fillOpacity={1} fill={`url(#color_${dataKey})`} isAnimationActive={false} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
   return (
-    <div className="dev-tela-scroll">
-      <div className="dev-scope-manager">
-        <div className="scope-types">
-          <button className={scopeType === 'ROLE' ? 'active' : ''} onClick={() => setScopeType('ROLE')}>Regras por Cargo</button>
-          <button className={scopeType === 'USER' ? 'active' : ''} onClick={() => setScopeType('USER')}>Regras por Usuário</button>
+    <div className="noc-dashboard-wrapper anim-fade-in dev-tela-scroll">
+      
+      {/* 1. TOPO: VITAL SIGNS C/ MICRO-SPARKLINES */}
+      <div className="noc-hud-grid">
+        <div className="noc-mini-card" style={{'--card-color': '#10b981'}}>
+           <div className="noc-mini-header">
+             <span className="noc-kpi-title"><Cpu size={14}/> CPU LOAD</span>
+             <span className="noc-kpi-value">{metrics.cpu}<span className="noc-kpi-unit">%</span></span>
+           </div>
+           <RenderSparkline dataKey="cpu" color="#10b981" />
         </div>
-        <div className="scope-targets">
-          {scopeType === 'ROLE' && (
-            <div className="scope-tabs">
-              <button className={activeScope === 'GLOBAL' ? 'active' : ''} onClick={() => setActiveScope('GLOBAL')}>Global</button>
-              <button className={activeScope === 'ADMIN' ? 'active' : ''} onClick={() => setActiveScope('ADMIN')}>Administradores</button>
-              <button className={activeScope === 'LOJA' ? 'active' : ''} onClick={() => setActiveScope('LOJA')}>Lojistas</button>
-              <button className={activeScope === 'MANUTENCAO' ? 'active' : ''} onClick={() => setActiveScope('MANUTENCAO')}>Técnicos</button>
-            </div>
-          )}
-          {scopeType === 'USER' && (
-            <select value={activeScope} onChange={e => setActiveScope(e.target.value)} className="dev-select-input">
-              {usuariosLista?.map((u, i) => <option key={i} value={u.usuario}>{u.nome || u.usuario} ({u.role})</option>)}
-            </select>
-          )}
+        <div className="noc-mini-card" style={{'--card-color': '#f59e0b'}}>
+           <div className="noc-mini-header">
+             <span className="noc-kpi-title"><HardDrive size={14}/> MEMORY</span>
+             <span className="noc-kpi-value" style={{color: '#f59e0b'}}>{metrics.ram}<span className="noc-kpi-unit">%</span></span>
+           </div>
+           <RenderSparkline dataKey="ram" color="#f59e0b" />
+        </div>
+        <div className="noc-mini-card" style={{'--card-color': '#38bdf8'}}>
+           <div className="noc-mini-header">
+             <span className="noc-kpi-title"><Globe size={14}/> BANDWIDTH</span>
+             <span className="noc-kpi-value">{metrics.bandwidth}<span className="noc-kpi-unit">Mb/s</span></span>
+           </div>
+           <RenderSparkline dataKey="bw" color="#38bdf8" />
+        </div>
+        <div className="noc-mini-card" style={{'--card-color': '#a855f7'}}>
+           <div className="noc-mini-header">
+             <span className="noc-kpi-title"><Database size={14}/> DB QUERIES</span>
+             <span className="noc-kpi-value">{metrics.dbQps}<span className="noc-kpi-unit">QPS</span></span>
+           </div>
+           <RenderSparkline dataKey="db" color="#a855f7" />
+        </div>
+        <div className="noc-mini-card" style={{'--card-color': '#ef4444'}}>
+           <div className="noc-mini-header" style={{flexDirection: 'column', alignItems: 'center', margin: 'auto', gap: '8px'}}>
+             <span className="noc-kpi-title" style={{justifyContent: 'center'}}><Radio size={14}/> NODE.JS UPTIME</span>
+             <span className="noc-kpi-value" style={{fontSize: '1.4rem'}}>{uptimeStr}</span>
+           </div>
         </div>
       </div>
 
-      <div className="dev-grid">
-        <div className="dev-col-left">
-          <div className="dev-card">
-            <div className="dev-card-header"><Settings2 size={20} /><h3>Restrições de Interface (UI)</h3></div>
-            <div className="modulos-list compact">
-              {TODOS_MODULOS.map(m => {
-                const isAtivo = !regrasAtivas?.modulosOcultos?.includes(m.id);
-                return (
-                  <div key={m.id} className={`modulo-item ${!isAtivo ? 'desativado' : ''}`}>
-                    <span>{m.nome.toUpperCase()}</span>
-                    <button className={`btn-toggle-ui ${isAtivo ? 'on' : 'off'}`} onClick={() => handleToggleModulo(m.id)}>{isAtivo ? 'ON' : 'OFF'}</button>
-                  </div>
-                );
-              })}
+      {/* 2. MEIO: GRÁFICOS E TOPOLOGIA (2/3 Infra | 1/3 Status) */}
+      <div className="noc-main-grid">
+        
+        {/* Oscilloscope principal (Cyber Card) */}
+        <div className="cyber-card" style={{ '--theme-color': '#38bdf8', padding: '1.2rem', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div className="dev-card-header flex-between" style={{ color: '#38bdf8', marginBottom: '10px' }}>
+             <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+               <span className={sysConfig.maintenanceMode ? '' : 'traffic-indicator-live'} style={{background: '#38bdf8', boxShadow: '0 0 5px #38bdf8'}}></span>
+               <h3>Network Oscilloscope</h3>
+             </div>
+             <span style={{fontSize: '0.8rem', color: '#10b981', fontWeight: '900', fontFamily: 'JetBrains Mono', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.3)'}}>{sysConfig.maintenanceMode ? '0' : metrics.reqs} REQ/s</span>
+          </div>
+          <div className="noc-chart-box" style={{flex: 1}}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={metricHistory} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.6}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
+                  <linearGradient id="colorRam" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.6}/><stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <YAxis tick={{fontSize: 10, fill: '#64748b'}} axisLine={false} tickLine={false} />
+                <RechartsTooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: 'white', fontSize: '10px' }} />
+                <Area type="monotone" dataKey="cpu" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorCpu)" isAnimationActive={false} />
+                <Area type="monotone" dataKey="ram" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorRam)" isAnimationActive={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Data Blocks - Topology */}
+        <div className="cyber-card" style={{ '--theme-color': '#10b981', padding: '1.2rem', display: 'flex', flexDirection: 'column' }}>
+          <div className="dev-card-header" style={{ color: '#10b981', marginBottom: '10px' }}>
+            <div style={{display:'flex', gap:'8px', alignItems:'center'}}><Network size={18} /><h3>Cluster Topology</h3></div>
+          </div>
+          <div className="cluster-topology-grid">
+            {clusterNodes.map(node => (
+              <div key={node.id} className="cluster-data-block" style={{'--status-color': node.status === 'online' ? '#10b981' : '#f59e0b'}}>
+                <div className="block-header">
+                  <span className="block-name"><Server size={12} color="var(--status-color)"/> {node.name}</span>
+                  <span className="block-ping">{node.ping}ms</span>
+                </div>
+                <span className="block-role">{node.role}</span>
+                <div className="block-activity">
+                  <span className="rx-tx" style={{color: '#38bdf8'}}>Rx {Math.floor(Math.random()*100)}</span>
+                  <span className="rx-tx" style={{color: '#a855f7'}}>Tx {Math.floor(Math.random()*100)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 3. TERMINAIS GÊMEOS: ROUTING E WAF */}
+      <div className="noc-terminals-grid">
+        <div className="terminal-window">
+          <div className="terminal-window-header">
+            <div className="mac-dots"><span></span><span></span><span></span></div>
+            <div className="terminal-window-title">bash - Ingress Traffic (Tail -f)</div>
+          </div>
+          <div className="traffic-terminal" ref={trafficContainerRef}>
+            {sysConfig.maintenanceMode ? (
+               <div style={{color: 'var(--text-muted)', textAlign: 'center', margin: 'auto', fontStyle: 'italic'}}>Network Routing Suspended</div>
+            ) : (
+              apiTraffic.map((pkt) => (
+                <div key={pkt.id} className="traffic-line">
+                  <span className="traffic-method" style={{color: pkt.color}}>{pkt.method}</span> 
+                  <span className="traffic-status" style={{color: '#10b981'}}>{pkt.status}</span>
+                  <span className="traffic-route">{pkt.route}</span> 
+                  <span className="traffic-ms">{pkt.ms}ms</span>
+                  <span className="traffic-ip">{pkt.ip}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="terminal-window" style={{borderColor: 'rgba(239, 68, 68, 0.4)', boxShadow: 'inset 0 0 30px rgba(239,68,68,0.1)'}}>
+          <div className="terminal-window-header" style={{borderBottomColor: 'rgba(239, 68, 68, 0.4)'}}>
+            <div className="mac-dots"><span></span><span></span><span></span></div>
+            <div className="terminal-window-title" style={{color: '#ef4444', display: 'flex', justifyContent: 'space-between', width: '100%'}}>
+              <span>bash - WAF / IDS Security Logs</span>
+              <span className="defcon-badge" style={{background: `rgba(${defconColor === '#ef4444' ? '239,68,68' : (defconColor==='#f59e0b'?'245,158,11':'16,185,129')}, 0.2)`, color: defconColor, border: `1px solid ${defconColor}`}}>THREAT LVL: {defconLevel}</span>
             </div>
           </div>
+          <div className="traffic-terminal" ref={wafContainerRef} style={{ color: '#ef4444' }}>
+            {threats.map((pkt) => <div key={pkt.id} className="traffic-line traffic-error"><span style={{ marginRight: '4px' }}>✖</span> {pkt.text}</div>)}
+          </div>
+        </div>
+      </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            <div className="dev-card api-traffic-card">
-              <div className="dev-card-header" style={{ color: '#10b981', fontSize: '0.9rem', marginBottom: '8px' }}><ActivitySquare size={16} className="pulse-icon" /><h3>Live Traffic</h3></div>
-              <div className="api-traffic-box" ref={trafficContainerRef} style={{ height: '120px' }}>
-                {apiTraffic.map((pkt) => <div key={pkt.id} className="traffic-line"><span className="traffic-indicator">►</span> {pkt.text}</div>)}
+      {/* 4. SWITCHBOARD: CONTROLES DE IAM E UI */}
+      <div className="noc-control-grid">
+        
+        {/* Controle de Escopo */}
+        <div className="dev-scope-manager switchboard-panel">
+          <div style={{fontSize: '0.75rem', fontWeight: '900', color: 'var(--primary)', marginBottom: '4px', display: 'flex', alignItems:'center', gap:'6px', textTransform: 'uppercase', letterSpacing: '1px'}}><ShieldCheck size={16}/> IDENTITY ACCESS (IAM)</div>
+          <div className="scope-types">
+            <button className={scopeType === 'ROLE' ? 'active' : ''} onClick={() => setScopeType('ROLE')}>By Role</button>
+            <button className={scopeType === 'USER' ? 'active' : ''} onClick={() => setScopeType('USER')}>By User</button>
+          </div>
+          <div className="scope-targets" style={{marginTop: 'auto'}}>
+            {scopeType === 'ROLE' && (
+              <div className="scope-tabs">
+                <button className={activeScope === 'GLOBAL' ? 'active' : ''} onClick={() => setActiveScope('GLOBAL')}>Global</button>
+                <button className={activeScope === 'ADMIN' ? 'active' : ''} onClick={() => setActiveScope('ADMIN')}>Admins</button>
+                <button className={activeScope === 'LOJA' ? 'active' : ''} onClick={() => setActiveScope('LOJA')}>Lojistas</button>
+                <button className={activeScope === 'MANUTENCAO' ? 'active' : ''} onClick={() => setActiveScope('MANUTENCAO')}>Técnicos</button>
               </div>
+            )}
+            {scopeType === 'USER' && (
+              <select value={activeScope} onChange={e => setActiveScope(e.target.value)} className="dev-select-input">
+                {usuariosLista?.map((u, i) => <option key={i} value={u.usuario}>{u.nome_tecnico || u.nome_gerente || u.usuario} ({u.role})</option>)}
+              </select>
+            )}
+          </div>
+        </div>
+
+        {/* UI Restrictions */}
+        <div className="dev-scope-manager switchboard-panel">
+          <div style={{fontSize: '0.75rem', fontWeight: '900', color: '#10b981', marginBottom: '4px', display: 'flex', alignItems:'center', justifyContent: 'space-between', textTransform: 'uppercase', letterSpacing: '1px'}}>
+            <div style={{display:'flex', alignItems:'center', gap:'6px'}}><Settings2 size={16}/> UI RENDERING MATRIX</div>
+            <span className="status-badge" style={{background: 'rgba(0,0,0,0.5)', color: 'white', padding: '2px 6px', fontSize: '0.65rem'}}>{TODOS_MODULOS.length - (regrasAtivas?.modulosOcultos?.length || 0)}/{TODOS_MODULOS.length}</span>
+          </div>
+          <div className="modulos-list">
+            {TODOS_MODULOS.map(m => {
+              const isAtivo = !regrasAtivas?.modulosOcultos?.includes(m.id);
+              return (
+                <div key={m.id} className={`modulo-item ${!isAtivo ? 'desativado' : ''}`}>
+                  <span>{m.nome}</span>
+                  <button className={`btn-toggle-ui ${isAtivo ? 'on' : 'off'}`} onClick={() => handleToggleModulo(m.id)}>{isAtivo ? 'ON' : 'OFF'}</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* API Feature Flags */}
+        <div className="dev-scope-manager switchboard-panel">
+          <div style={{fontSize: '0.75rem', fontWeight: '900', color: '#f59e0b', marginBottom: '4px', display: 'flex', alignItems:'center', gap:'6px', textTransform: 'uppercase', letterSpacing: '1px'}}><Sliders size={16}/> API FEATURE FLAGS</div>
+          <div className="feature-flags-list">
+            {['Permitir Exportações', 'Ativar Alertas de Áudio', 'Fluxo de Telemetria', 'Habilitar Chat', 'Forçar Modo Escuro'].map(f => {
+              const ativo = regrasAtivas?.features?.[f] ?? (f !== 'Forçar Modo Escuro');
+              return (
+                <div key={f} className="feature-item" onClick={() => handleToggleFeature(f)}>
+                  <span>{f}</span> {ativo ? <ToggleRight size={24} color="var(--success)" /> : <ToggleLeft size={24} color="var(--text-muted)" />}
+                </div>
+              );
+            })}
+            <div className="feature-item" onClick={() => { addLog('[NOC] Regras BGP / Geofencing atualizadas.', 'warning'); showToast('Filtro de IP Regional aplicado.', 'info'); }}>
+              <span style={{ color: '#38bdf8' }}><Globe size={16} style={{marginRight: '6px', verticalAlign: 'middle'}}/> IP Geofencing</span> <ToggleLeft size={24} color="var(--text-muted)" />
             </div>
+          </div>
+        </div>
 
-            <div className="dev-card api-traffic-card" style={{ borderColor: 'rgba(239, 68, 68, 0.3)', background: 'linear-gradient(180deg, var(--card-bg) 0%, rgba(239, 68, 68, 0.05) 100%)' }}>
-              <div className="dev-card-header" style={{ color: '#ef4444', fontSize: '0.9rem', marginBottom: '8px' }}><ShieldX size={16} className="pulse-icon" /><h3>WAF / IDS Log</h3></div>
-              <div className="api-traffic-box" style={{ height: '120px', color: '#ef4444', borderColor: '#ef4444' }}>
-                {threats.map((pkt) => <div key={pkt.id} className="traffic-line error-text"><span className="traffic-indicator" style={{ color: '#ef4444' }}>✖</span> {pkt.text}</div>)}
-              </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// 4. TELA SISTEMA (BROADCASTING + MANUTENÇÃO + EXPORTAÇÃO REAL)
+// ============================================================================
+const TelaSistema = ({ api, showToast, addLog, sysConfig, updateSysConfig, setModalConfig }) => {
+  const [globalBanner, setGlobalBanner] = useState(sysConfig?.regras?.GLOBAL?.features?.globalBanner || '');
+  const [isExporting, setIsExporting] = useState(null);
+  const [isPurging, setIsPurging] = useState(false);
+  const [storageUsed, setStorageUsed] = useState(87);
+
+  const handleMaintenance = () => { 
+    const novoEstado = !sysConfig.maintenanceMode; 
+    setModalConfig({
+      isOpen: true,
+      title: novoEstado ? 'Ativar Lockdown de Segurança' : 'Retomar Operações',
+      message: novoEstado 
+        ? 'Deseja bloquear todas as operações de telemetria e colocar o sistema em modo Offline? Novos dados IoT serão descartados.' 
+        : 'Deseja retomar as operações normais e reabrir o fluxo de dados dos nós Edge?',
+      onConfirm: () => {
+        updateSysConfig('ROLE', 'GLOBAL', 'maintenanceMode', null, novoEstado); 
+        addLog(`Status da API alterado para: ${novoEstado ? 'OFFLINE' : 'ONLINE'}`, novoEstado ? 'error' : 'success');
+        showToast(novoEstado ? 'Sistema em modo Offline.' : 'Sistema operacional liberado.', novoEstado ? 'warning' : 'success');
+      }
+    });
+  };
+
+  const handlePurge = () => {
+    setModalConfig({
+      isOpen: true,
+      title: 'Limpeza de Dados (Purge)',
+      message: 'Você tem certeza de que deseja apagar permanentemente todos os registros de telemetria com mais de 90 dias do banco de dados MySQL? Esta ação liberará armazenamento mas não pode ser desfeita.',
+      onConfirm: async () => {
+        setIsPurging(true);
+        try {
+          const res = await api.post('/system/purge', { dias: 90 });
+          showToast(`Registros antigos apagados com sucesso.`, 'success');
+          addLog(`[DB] Exclusão executada: ${res.data?.deleted || 0} linhas removidas do cluster MySQL.`, 'warning');
+          setStorageUsed(12);
+        } catch (e) { showToast('Falha na exclusão.', 'error'); }
+        setIsPurging(false);
+      }
+    });
+  };
+
+  const exportarTabelaReal = async (nomeTabela) => {
+    setIsExporting(nomeTabela);
+    addLog(`[DB] Iniciando dump estruturado da tabela: ${nomeTabela}...`, 'info');
+    showToast(`Buscando ${nomeTabela} no banco de dados...`, 'info');
+    
+    try {
+      const res = await api.post('/system/exportar-tabela', { tabela: nomeTabela });
+      const { dados } = res.data;
+      if (!dados || dados.length === 0) {
+        setIsExporting(null);
+        return showToast('A tabela encontra-se vazia.', 'warning');
+      }
+      
+      const cabecalhos = Object.keys(dados[0]).join(',');
+      const linhas = dados.map(linha => Object.values(linha).map(valor => valor === null ? '""' : `"${String(valor).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const csvContent = `${cabecalhos}\n${linhas}`;
+      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+      
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `Dump_${nomeTabela.toUpperCase()}_${Date.now()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast(`Download de ${nomeTabela} concluído!`, 'success');
+      addLog(`[DB] Dump de ${nomeTabela} extraído para CSV.`, 'success');
+    } catch (erro) {
+      showToast('Falha ao acessar o banco de dados.', 'error');
+      addLog(`[DB ERR] Conexão recusada ao tentar extrair ${nomeTabela}.`, 'error');
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
+  return (
+    <div className="dev-tela-scroll">
+      <div className="dev-grid-main">
+        <div className="dev-col-left">
+          <div className="dev-card glass-card" style={{ borderTop: '4px solid var(--warning)', position: 'relative', overflow: 'hidden' }}>
+            {sysConfig.maintenanceMode && <div className="hazard-stripes"></div>}
+            <div className="dev-card-header" style={{color: 'var(--warning)'}}>
+              <Radio size={20}/><h3>Controle de Operações Globais</h3>
+            </div>
+            
+            <div style={{position: 'relative', zIndex: 2}}>
+              <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '10px'}}>Comunicado Global (Transmissão em Massa):</p>
+              <textarea 
+                className="w-100 green-phosphor crt-terminal" 
+                style={{padding: '15px', borderRadius: '8px', minHeight: '90px', marginBottom: '15px', resize: 'vertical'}}
+                value={globalBanner}
+                onChange={e => setGlobalBanner(e.target.value)}
+                placeholder="> INSERIR AVISO DE MANUTENÇÃO AQUI_"
+              />
+              <button className="btn btn-primary w-100" onClick={() => { updateSysConfig('ROLE', 'GLOBAL', 'features', 'globalBanner', globalBanner); showToast('Comunicado emitido.', 'success'); addLog('Mensagem Global transmitida na rede.', 'info'); }} style={{fontWeight: '900', padding: '14px', borderRadius: '10px', textTransform: 'uppercase', letterSpacing: '1px'}}>
+                <Send size={18} style={{marginRight: '8px'}}/> TRANSMITIR MENSAGEM
+              </button>
+
+              <hr style={{margin: '25px 0', borderColor: 'rgba(255,255,255,0.05)'}} />
+
+              <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '10px'}}>Interruptor de Segurança (Kill Switch / Lockdown):</p>
+              <button 
+                className={`btn w-100 ${sysConfig.maintenanceMode ? 'btn-success' : 'btn-danger pulse-danger-btn'}`} 
+                onClick={handleMaintenance}
+                style={{ padding: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: 'white', border: 'none', fontWeight: '900', letterSpacing: '1px', borderRadius: '10px' }}
+              >
+                {sysConfig.maintenanceMode ? <><Unlock size={22} /> DESBLOQUEAR SISTEMA (ONLINE)</> : <><AlertOctagon size={22} /> INICIAR LOCKDOWN CRÍTICO (OFFLINE)</>}
+              </button>
             </div>
           </div>
         </div>
 
         <div className="dev-col-right">
-          <div className="dev-card">
-            <div className="dev-card-header" style={{ color: 'var(--primary)' }}><Sliders size={20} /><h3>Regras de Negócios</h3></div>
-            <div className="feature-flags-list compact">
-              {['Permitir Exportações', 'Ativar Alertas de Áudio', 'Fluxo de Telemetria', 'Habilitar Chat', 'Modo de Leitura', 'Forçar Modo Escuro'].map(f => {
-                const ativo = regrasAtivas?.features?.[f] ?? (f !== 'Modo de Leitura' && f !== 'Forçar Modo Escuro');
-                return (
-                  <div key={f} className="feature-item" onClick={() => handleToggleFeature(f)}>
-                    <span>{f}</span> {ativo ? <ToggleRight size={28} color="var(--success)" /> : <ToggleLeft size={28} color="var(--text-muted)" />}
-                  </div>
-                );
-              })}
-              <div className="feature-item" onClick={() => { addLog('[NOC] Regras de Firewall atualizadas.', 'warning'); showToast('Filtro Regional aplicado.', 'info'); }}>
-                <span style={{ color: '#38bdf8' }}><Globe size={16} /> IP Firewall Geofencing</span> <ToggleLeft size={28} color="var(--text-muted)" />
-              </div>
-            </div>
+          <div className="dev-card glass-card" style={{ borderTop: '4px solid var(--primary)' }}>
+             <div className="dev-card-header" style={{color: 'var(--primary)'}}><Database size={20}/><h3>Ferramentas de Extração (MySQL Dump)</h3></div>
+             <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '15px'}}>Extraia dados brutos das instâncias corporativas do banco de dados em formato CSV para backup físico local.</p>
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+               <button onClick={() => exportarTabelaReal('equipamentos')} disabled={isExporting !== null} className="btn btn-outline w-100" style={{display: 'flex', gap: '12px', justifyContent: 'flex-start', padding: '14px', alignItems: 'center', fontWeight: '800'}}>
+                 {isExporting === 'equipamentos' ? <Loader2 size={18} className="spin" /> : <Server size={18} color="var(--primary)"/>} 
+                 {isExporting === 'equipamentos' ? 'EXTRAINDO...' : 'Tabela: Equipamentos Edge (IoT)'}
+               </button>
+               <button onClick={() => exportarTabelaReal('leituras_telemetria')} disabled={isExporting !== null} className="btn btn-outline w-100" style={{display: 'flex', gap: '12px', justifyContent: 'flex-start', padding: '14px', alignItems: 'center', fontWeight: '800'}}>
+                 {isExporting === 'leituras_telemetria' ? <Loader2 size={18} className="spin" /> : <Activity size={18} color="#f59e0b"/>} 
+                 {isExporting === 'leituras_telemetria' ? 'EXTRAINDO...' : 'Tabela: Telemetria Contínua'}
+               </button>
+               <button onClick={() => exportarTabelaReal('audit_logs')} disabled={isExporting !== null} className="btn btn-outline w-100" style={{display: 'flex', gap: '12px', justifyContent: 'flex-start', padding: '14px', alignItems: 'center', fontWeight: '800'}}>
+                 {isExporting === 'audit_logs' ? <Loader2 size={18} className="spin" /> : <ShieldCheck size={18} color="#a855f7"/>} 
+                 {isExporting === 'audit_logs' ? 'EXTRAINDO...' : 'Tabela: Auditoria SOC (Log Imutável)'}
+               </button>
+             </div>
           </div>
 
-          <div className="dev-card danger-zone">
-            <div className="dev-card-header" style={{ color: 'var(--danger)' }}><Cpu size={20} /><h3>Infraestrutura Crítica</h3></div>
-            <div className="server-metrics-box">
-              <div className="metric-item"><span className="metric-label">CPU LOAD</span><span className="metric-value">{metrics.cpu}%</span></div>
-              <div className="metric-item"><span className="metric-label">RAM</span><span className="metric-value">{metrics.ram} MB</span></div>
-              <div className="metric-item"><span className="metric-label">REQ/s</span><span className="metric-value">{metrics.reqs}</span></div>
+          <div className="dev-card glass-card danger-zone" style={{ borderTop: '4px solid #ef4444' }}>
+            <div className="dev-card-header" style={{color: '#ef4444', position: 'relative', zIndex: 2}}><ServerCrash size={20}/><h3>Rotina Destrutiva (Purge)</h3></div>
+            <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '15px', position: 'relative', zIndex: 2}}>Esta operação forçará o banco de dados a deletar partições antigas de telemetria (+90 dias) para liberar armazenamento em disco.</p>
+            
+            <div style={{marginBottom: '20px', position: 'relative', zIndex: 2}}>
+               <div className="storage-info">
+                 <span>Armazenamento DB (MySQL)</span>
+                 <span>{storageUsed}%</span>
+               </div>
+               <div className="storage-bar-bg">
+                 <div className="storage-bar-fill" style={{ width: `${storageUsed}%`, background: storageUsed > 80 ? '#ef4444' : '#10b981' }}></div>
+               </div>
             </div>
-            <div className="feature-item critical-flag" onClick={handleMaintenance}>
-              <div><span style={{ color: 'var(--danger)', fontWeight: 'bold' }}>DEFESA ATIVA (LOCKDOWN)</span><br /><span style={{ fontSize: '0.7rem' }}>Desativa logins. Só ROOT passa.</span></div>
-              {sysConfig.maintenanceMode ? <ToggleRight size={32} color="var(--danger)" /> : <ToggleLeft size={32} color="var(--text-muted)" />}
-            </div>
-            <div className="danger-actions">
-              <button className="btn btn-outline" onClick={() => { localStorage.setItem('termosync_force_reload', Date.now()); addLog('F5 Forçado.', 'success'); }} style={{ color: 'white', borderColor: 'var(--warning)', background: 'rgba(245, 158, 11, 0.1)' }}><Power size={18} /> Forçar F5 Remoto</button>
-            </div>
+
+            <button className="btn btn-outline w-100" onClick={handlePurge} disabled={isPurging} style={{color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)', display: 'flex', justifyContent: 'center', gap: '10px', padding: '16px', fontWeight: '900', position: 'relative', zIndex: 2, background: 'rgba(239,68,68,0.1)', letterSpacing: '1px'}}>
+               {isPurging ? <Loader2 size={18} className="spin"/> : <Eraser size={18}/>} 
+               {isPurging ? 'EXECUTANDO PURGE...' : 'EXECUTAR PURGE DE DADOS (+90 DIAS)'}
+            </button>
+            <div className="hazard-stripes"></div>
           </div>
         </div>
       </div>
@@ -344,49 +662,65 @@ const TelaNOC = ({ showToast, sysConfig, updateSysConfig, tocarAlarme, usuariosL
   );
 };
 
-const TelaSaaS = ({ api, sysConfig, updateSysConfig, filiaisDb, showToast, addLog }) => {
+// ============================================================================
+// 5. TELA SAAS (TENANTS & API)
+// ============================================================================
+const TelaSaaS = ({ api, sysConfig, updateSysConfig, filiaisDb, showToast, addLog, setModalConfig }) => {
   const handleMudarPlano = (loja, plano) => { updateSysConfig(null, loja, 'saas_plan', null, plano); addLog(`[SAAS] Contrato de ${loja} alterado para ${plano}.`, plano === 'SUSPENSO' ? 'error' : 'success'); showToast(`Licença de ${loja} atualizada.`, plano === 'SUSPENSO' ? 'error' : 'success'); };
   const handleMudarRetencao = (loja, dias) => { addLog(`[CLOUD] Limite de retenção de ${loja} ajustado para ${dias}.`, 'info'); showToast(`Cluster de dados de ${loja} ajustado.`, 'success'); };
 
   const handleForcarLogout = (loja) => {
-    localStorage.setItem('termosync_force_logout', `${loja}_${Date.now()}`);
-    addLog(`[SECURITY] Sinal de KILL SWITCH disparado para a filial: ${loja}.`, 'error');
-    showToast(`Comando de expulsão (Logout) enviado com sucesso para ${loja}.`, 'success');
+    setModalConfig({
+      isOpen: true,
+      title: 'Forçar Logout Remoto',
+      message: `Tem certeza de que deseja acionar o Kill Switch para o tenant ${loja}? Todos os usuários locais serão desconectados instantaneamente.`,
+      onConfirm: () => {
+        localStorage.setItem('termosync_force_logout', `${loja}_${Date.now()}`);
+        addLog(`[SECURITY] Sinal de KILL SWITCH disparado para: ${loja}.`, 'error');
+        showToast(`Comando de expulsão enviado para ${loja}.`, 'success');
+      }
+    });
   };
 
   const [chavesAPI, setChavesAPI] = useState({});
+  const [copiedKey, setCopiedKey] = useState(null);
+
   const gerarChaveAPI = (loja) => {
     const key = 'sk_live_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     setChavesAPI(prev => ({ ...prev, [loja]: key }));
-    addLog(`[API] Nova chave de integração gerada para ${loja}.`, 'success');
-    showToast(`API Key gerada para ${loja}.`, 'success');
+    addLog(`[API] Nova chave gerada para ${loja}.`, 'success');
+    showToast(`API Key gerada.`, 'success');
+  };
+
+  const copyToClipboard = (loja, key) => {
+    navigator.clipboard.writeText(key);
+    setCopiedKey(loja);
+    setTimeout(() => setCopiedKey(null), 2000);
+    showToast('Chave copiada!', 'info');
   };
 
   const loginAs = async (loja) => {
     addLog(`[AUTH] Solicitando token de Impersonate para ${loja}...`, 'warning');
-    showToast(`Gerando acesso remoto para ${loja}...`, 'warning');
+    showToast(`Gerando acesso remoto...`, 'warning');
     try {
       const res = await api.post('/impersonate', { filialDestino: loja });
-      const fakeToken = res.data.token;
-      addLog(`[AUTH] Token recebido. Abrindo sessão espelho.`, 'success');
       const url = new URL(window.location.href);
-      url.searchParams.set('impersonateToken', fakeToken);
+      url.searchParams.set('impersonateToken', res.data.token);
       url.searchParams.set('impersonateLoja', loja);
       window.open(url.toString(), '_blank');
-    } catch (err) {
-      addLog(`[AUTH ERR] Falha ao forjar token: ${err.message}`, 'error');
-      showToast('Erro ao criar sessão remota.', 'error');
-    }
+    } catch (err) { showToast('Erro ao criar sessão remota.', 'error'); }
   };
 
   return (
     <div className="dev-tela-scroll">
-      <div className="dev-card" style={{ marginBottom: '1.5rem' }}>
-        <div className="dev-card-header" style={{ color: '#a855f7' }}><ShieldAlert size={20} /><h3>Contas Corporativas e Integrações API</h3></div>
-        <div className="saas-clients-table">
-          <div className="saas-table-header" style={{ gridTemplateColumns: '2fr 1fr 1.5fr 1fr 100px' }}>
-            <div>Cliente</div><div>Capacidade Cloud</div><div style={{ textAlign: 'center' }}>API Webhooks</div><div style={{ textAlign: 'right' }}>Licença (Acesso)</div><div style={{ textAlign: 'right' }}>Ações</div>
-          </div>
+      <div className="dev-card glass-card" style={{ padding: 0, overflow: 'hidden', borderTop: '4px solid #a855f7' }}>
+        <div className="dev-card-header" style={{ color: '#a855f7', padding: '1.5rem', marginBottom: 0 }}><ShieldAlert size={20} /><h3>Contas Corporativas e Integrações API</h3></div>
+        
+        <div className="saas-table-header saas-grid-cols">
+          <div>Tenant / Cliente</div><div>Storage Cloud</div><div style={{ textAlign: 'center' }}>Chaves API (Webhooks)</div><div style={{ textAlign: 'center' }}>Licença (Acesso)</div><div style={{ textAlign: 'right' }}>Ações</div>
+        </div>
+        
+        <div style={{maxHeight: '500px', overflowY: 'auto'}}>
           {filiaisDb?.map((filial, index) => {
             const planoAtual = sysConfig.planos?.[filial] || 'FREE';
             const isSuspenso = planoAtual === 'SUSPENSO';
@@ -394,36 +728,43 @@ const TelaSaaS = ({ api, sysConfig, updateSysConfig, filiaisDb, showToast, addLo
             const storageColor = storagePercent > 80 ? 'var(--danger)' : (storagePercent > 50 ? 'var(--warning)' : 'var(--success)');
 
             return (
-              <div className={`saas-client-row ${isSuspenso ? 'row-suspended' : ''}`} key={index} style={{ gridTemplateColumns: '2fr 1fr 1.5fr 1fr 100px' }}>
-                <div className="client-name" style={{ color: isSuspenso ? 'var(--danger)' : 'var(--text-main)' }}>{isSuspenso ? <Network size={16} /> : <Store size={16} />} {filial}</div>
+              <div className={`saas-client-row saas-grid-cols ${isSuspenso ? 'row-suspended' : ''}`} key={index}>
+                <div style={{ color: isSuspenso ? 'var(--danger)' : 'white', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {isSuspenso ? <ZapOff size={16} /> : <Store size={16} />} {filial}
+                </div>
 
-                <div className="client-storage">
+                <div style={{ paddingRight: '15px' }}>
                   <div className="storage-bar-bg"><div className="storage-bar-fill" style={{ width: `${storagePercent}%`, backgroundColor: storageColor }}></div></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="storage-text"><Cloud size={10} /> {storagePercent}% Utilizado</span>
-                    <select disabled={isSuspenso} onChange={(e) => handleMudarRetencao(filial, e.target.value)} style={{ background: 'transparent', border: 'none', fontSize: '0.6rem', color: 'var(--primary)', outline: 'none', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.65rem', fontWeight: '800', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><Cloud size={10} /> {storagePercent}%</span>
+                    <select disabled={isSuspenso} onChange={(e) => handleMudarRetencao(filial, e.target.value)} style={{ background: 'transparent', border: 'none', fontSize: '0.65rem', color: '#38bdf8', outline: 'none', cursor: 'pointer', fontWeight: '800' }}>
                       <option value="30">30 Dias</option><option value="90">90 Dias</option><option value="365">1 Ano</option>
                     </select>
                   </div>
                 </div>
 
-                <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {chavesAPI[filial] ? (
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#a855f7', background: 'rgba(168, 85, 247, 0.1)', padding: '4px 8px', borderRadius: '4px' }}>{chavesAPI[filial].substring(0, 12)}...</span>
+                    <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
+                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '0.75rem', color: '#a855f7', padding: '6px 10px', fontWeight: 'bold' }}>{chavesAPI[filial].substring(0, 10)}...</span>
+                      <button onClick={() => copyToClipboard(filial, chavesAPI[filial])} style={{ background: '#a855f7', border: 'none', color: 'white', padding: '6px 10px', cursor: 'pointer' }}>
+                        {copiedKey === filial ? <Check size={14}/> : <Copy size={14}/>}
+                      </button>
+                    </div>
                   ) : (
                     <button className="btn-icon-small" title="Gerar API Key" onClick={() => gerarChaveAPI(filial)} disabled={isSuspenso}><Key size={14} /></button>
                   )}
                 </div>
 
-                <div className="client-plan-select">
-                  <select value={planoAtual} onChange={(e) => handleMudarPlano(filial, e.target.value)} className={`plan-dropdown plan-${planoAtual.toLowerCase()}`}>
+                <div style={{textAlign: 'center', padding: '0 10px'}}>
+                  <select value={planoAtual} onChange={(e) => handleMudarPlano(filial, e.target.value)} className="plan-dropdown">
                     <option value="FREE">FREE (Básica)</option><option value="PRO">PRO (Avançada)</option><option value="ENTERPRISE">ENTERPRISE (Total)</option><option value="SUSPENSO">⚠️ LOCKDOWN</option>
                   </select>
                 </div>
 
-                <div style={{ textAlign: 'right', display: 'flex', gap: '5px', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                   <button className="btn-icon-small" title="Acessar Como Cliente (Impersonate)" onClick={() => loginAs(filial)}><UserCheck size={16} /></button>
-                  <button className="btn-icon-small danger-text" title="Forçar Logout Remoto" onClick={() => handleForcarLogout(filial)}><Power size={16} /></button>
+                  <button className="btn-icon-small danger-text" title="Forçar Logout Remoto (Kill Switch)" onClick={() => handleForcarLogout(filial)}><Power size={16} /></button>
                 </div>
               </div>
             );
@@ -434,11 +775,16 @@ const TelaSaaS = ({ api, sysConfig, updateSysConfig, filiaisDb, showToast, addLo
   );
 };
 
-const TelaBilling = ({ sysConfig, filiaisDb, showToast, addLog }) => {
+// ============================================================================
+// 6. TELA BILLING (FINANCEIRO E FATURAMENTO)
+// ============================================================================
+const TelaBilling = ({ sysConfig, filiaisDb, showToast, addLog, updateSysConfig, setModalConfig }) => {
   const [billingSetup, setBillingSetup] = useState(() => {
     const saved = localStorage.getItem('termosync_billing_setup');
     return saved ? JSON.parse(saved) : { pro: 299.90, ent: 899.90, diaVencimento: 10, multa: 2.0, juros: 1.0 };
   });
+  const [faturasPagasManualmente, setFaturasPagasManualmente] = useState([]);
+  const [isGenerating, setIsGenerating] = useState(null);
 
   const updateSetup = (key, val) => {
     const newSetup = { ...billingSetup, [key]: parseFloat(val) || 0 };
@@ -449,32 +795,32 @@ const TelaBilling = ({ sysConfig, filiaisDb, showToast, addLog }) => {
   const hoje = new Date();
   const atrasoDias = hoje.getDate() > billingSetup.diaVencimento ? hoje.getDate() - billingSetup.diaVencimento : 0;
 
-  const getDetalhesFatura = (plano, isSuspenso) => {
+  const getDetalhesFatura = (filial, plano, isSuspenso) => {
     if (plano === 'FREE' && !isSuspenso) return null;
+    const foiPaga = faturasPagasManualmente.includes(filial);
     let base = isSuspenso ? billingSetup.pro : (plano === 'ENTERPRISE' ? billingSetup.ent : billingSetup.pro);
-    let valorMulta = 0; let valorJuros = 0; let status = "PAGO";
+    let valorMulta = 0; let valorJuros = 0; let status = foiPaga ? "PAGO" : "PAGO";
 
-    if (isSuspenso || atrasoDias > 0) {
+    if (!foiPaga && (isSuspenso || atrasoDias > 0)) {
       status = isSuspenso ? "VENCIDA" : "ATRASADA";
       valorMulta = base * (billingSetup.multa / 100);
       valorJuros = (base * (billingSetup.juros / 100)) * (atrasoDias / 30);
     }
-
-    return { base, multa: valorMulta, juros: valorJuros, total: base + valorMulta + valorJuros, status };
+    return { base, multa: valorMulta, juros: valorJuros, total: base + valorMulta + valorJuros, status, foiPaga };
   };
 
   const metricasFinanceiras = useMemo(() => {
     let mrr = 0; let inadimplencia = 0; let ativos = 0;
     (filiaisDb || []).forEach((filial) => {
       const plano = sysConfig.planos?.[filial] || 'FREE';
-      const fatura = getDetalhesFatura(plano, plano === 'SUSPENSO');
+      const fatura = getDetalhesFatura(filial, plano, plano === 'SUSPENSO');
       if (fatura) {
         if (fatura.status === 'VENCIDA' || fatura.status === 'ATRASADA') inadimplencia += fatura.total;
         else { ativos++; mrr += fatura.total; }
       }
     });
     return { mrr, arr: mrr * 12, inadimplencia, ativos, total: (filiaisDb || []).length };
-  }, [filiaisDb, sysConfig.planos, billingSetup, atrasoDias]);
+  }, [filiaisDb, sysConfig.planos, billingSetup, atrasoDias, faturasPagasManualmente]);
 
   const dadosGraficoReceita = useMemo(() => {
     const m = metricasFinanceiras.mrr;
@@ -483,6 +829,25 @@ const TelaBilling = ({ sysConfig, filiaisDb, showToast, addLog }) => {
       { mes: 'Jan', receita: m * 0.8 }, { mes: 'Fev', receita: m * 0.95 }, { mes: 'Mar (Atual)', receita: m }
     ];
   }, [metricasFinanceiras.mrr]);
+
+  const confirmarPagamento = (filial) => {
+    setModalConfig({
+      isOpen: true,
+      title: 'Confirmar Liquidação de Fatura',
+      message: `Você confirma o recebimento do pagamento do tenant ${filial}? Isso alterará o status para PAGO e reativará automaticamente o acesso do cliente caso ele esteja bloqueado.`,
+      onConfirm: () => {
+        setFaturasPagasManualmente(prev => [...prev, filial]);
+        const planoAtual = sysConfig.planos?.[filial];
+        if (planoAtual === 'SUSPENSO') {
+          updateSysConfig(null, filial, 'saas_plan', null, 'PRO');
+          addLog(`[FINANCEIRO] Fatura de ${filial} liquidada. Serviço SaaS reativado.`, 'success');
+        } else {
+          addLog(`[FINANCEIRO] Fatura de ${filial} liquidada.`, 'success');
+        }
+        showToast('Pagamento confirmado com sucesso.', 'success');
+      }
+    });
+  };
 
   const drawBarcode = (doc, x, y, width, height) => {
     let currentX = x;
@@ -495,76 +860,70 @@ const TelaBilling = ({ sysConfig, filiaisDb, showToast, addLog }) => {
     }
   };
 
+  const simularGeracao = (tipo, filial, callback) => {
+    setIsGenerating(`${tipo}_${filial}`);
+    showToast(`Gerando documento de ${tipo}...`, 'info');
+    setTimeout(() => { callback(); setIsGenerating(null); }, 1200);
+  };
+
   const gerarNotaFiscalPDF = (filial, fatura) => {
-    const doc = new jsPDF('p', 'mm', 'a4');
-    doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.text("PREFEITURA MUNICIPAL", 105, 20, { align: "center" });
-    doc.setFontSize(12); doc.text("NOTA FISCAL DE SERVIÇOS ELETRÔNICA - NFS-e", 105, 28, { align: "center" });
-    doc.setDrawColor(150); doc.setLineWidth(0.3); doc.rect(10, 35, 190, 240);
-    doc.setFillColor(240, 240, 240); doc.rect(10, 35, 190, 8, 'F'); doc.rect(10, 35, 190, 8);
-    doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("PRESTADOR DE SERVIÇOS", 12, 40);
-    doc.setFontSize(11); doc.text("TERMOSYNC CORPORATION LTDA", 12, 50);
-    doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.text("CNPJ: 12.345.678/0001-90", 12, 55); doc.text("Avenida da Tecnologia, 1000 - São Paulo/SP", 12, 60); doc.line(10, 65, 200, 65);
-    doc.setFillColor(240, 240, 240); doc.rect(10, 65, 190, 8, 'F'); doc.rect(10, 65, 190, 8);
-    doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("TOMADOR DE SERVIÇOS", 12, 70);
-    doc.setFontSize(11); doc.text(filial.toUpperCase(), 12, 80);
-    doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.text("CNPJ: 98.765.432/0001-10", 12, 85); doc.text(`Filial Registrada - ${filial}`, 12, 90); doc.line(10, 95, 200, 95);
-    doc.setFillColor(240, 240, 240); doc.rect(10, 95, 190, 8, 'F'); doc.rect(10, 95, 190, 8);
-    doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("DISCRIMINAÇÃO DOS SERVIÇOS", 12, 100); doc.setFont("helvetica", "normal");
-    const obs = `Licenciamento SaaS TermoSync IoT.\nPlano: ${sysConfig.planos?.[filial] || 'PRO'}.\nEncargos: R$ ${(fatura.multa + fatura.juros).toFixed(2)} (Atraso/Juros).`;
-    doc.text(obs, 12, 110);
-    doc.line(10, 250, 200, 250); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("VALOR TOTAL DA NOTA: R$", 120, 260);
-    doc.setFontSize(14); doc.text(`${fatura.total.toFixed(2).replace('.', ',')}`, 175, 260);
-    doc.save(`NF_${filial}_${Date.now()}.pdf`);
-    addLog(`[BILLING] NFS-e Oficial gerada para ${filial}.`, 'success'); showToast('Nota Fiscal gerada com sucesso.', 'success');
+    simularGeracao('NFe', filial, () => {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.text("PREFEITURA MUNICIPAL", 105, 20, { align: "center" });
+      doc.setFontSize(12); doc.text("NOTA FISCAL DE SERVIÇOS ELETRÔNICA - NFS-e", 105, 28, { align: "center" });
+      doc.setDrawColor(150); doc.setLineWidth(0.3); doc.rect(10, 35, 190, 240);
+      doc.setFillColor(240, 240, 240); doc.rect(10, 35, 190, 8, 'F'); doc.rect(10, 35, 190, 8);
+      doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("PRESTADOR DE SERVIÇOS", 12, 40);
+      doc.setFontSize(11); doc.text("TERMOSYNC CORPORATION LTDA", 12, 50);
+      doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.text("CNPJ: 12.345.678/0001-90", 12, 55); doc.text("Avenida da Tecnologia, 1000 - São Paulo/SP", 12, 60); doc.line(10, 65, 200, 65);
+      doc.setFillColor(240, 240, 240); doc.rect(10, 65, 190, 8, 'F'); doc.rect(10, 65, 190, 8);
+      doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("TOMADOR DE SERVIÇOS", 12, 70);
+      doc.setFontSize(11); doc.text(filial.toUpperCase(), 12, 80);
+      doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.text("CNPJ: 98.765.432/0001-10", 12, 85); doc.text(`Tenant - ${filial}`, 12, 90); doc.line(10, 95, 200, 95);
+      doc.setFillColor(240, 240, 240); doc.rect(10, 95, 190, 8, 'F'); doc.rect(10, 95, 190, 8);
+      doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("DISCRIMINAÇÃO DOS SERVIÇOS", 12, 100); doc.setFont("helvetica", "normal");
+      const obs = `Licenciamento SaaS TermoSync IoT.\nPlano: ${sysConfig.planos?.[filial] || 'PRO'}.\nEncargos: R$ ${(fatura.multa + fatura.juros).toFixed(2)} (Atraso/Juros).`;
+      doc.text(obs, 12, 110);
+      doc.line(10, 250, 200, 250); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("VALOR TOTAL DA NOTA: R$", 120, 260);
+      doc.setFontSize(14); doc.text(`${fatura.total.toFixed(2).replace('.', ',')}`, 175, 260);
+      doc.save(`NF_${filial}_${Date.now()}.pdf`);
+      addLog(`[BILLING] NFS-e Oficial gerada para ${filial}.`, 'success'); 
+      showToast('Nota Fiscal gerada com sucesso.', 'success');
+    });
   };
 
   const gerarBoletoPDF = (filial, fatura) => {
-    const doc = new jsPDF('p', 'mm', 'a4'); doc.setFont("helvetica", "bold");
-    doc.setFontSize(10); doc.text("RECIBO DO PAGADOR", 10, 20); doc.setLineWidth(0.5); doc.line(10, 22, 200, 22);
-    doc.setFontSize(16); doc.text("Banco TermoSync S.A.", 10, 30); doc.setFontSize(14); doc.text("| 001-9 |", 70, 30); doc.setFontSize(11); doc.text("00190.00009 01234.567890 00000.000000 1 89000000000000", 95, 30);
-    doc.setLineWidth(0.2); doc.rect(10, 35, 190, 60); doc.line(10, 45, 200, 45); doc.line(10, 55, 200, 55); doc.line(150, 35, 150, 95);
-    doc.setFontSize(6); doc.setFont("helvetica", "normal"); doc.text("Local de Pagamento", 12, 38); doc.text("Pagável em qualquer banco até o vencimento.", 12, 42);
-    doc.text("Vencimento", 152, 38); doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.text(`${billingSetup.diaVencimento}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`, 152, 42);
-    doc.setFontSize(6); doc.setFont("helvetica", "normal"); doc.text("Beneficiário", 12, 48); doc.text("TermoSync Corp LTDA - CNPJ 12.345.678/0001-90", 12, 52); doc.text("Agência / Cód", 152, 48); doc.text("0001 / 12345-6", 152, 52);
-    doc.text("Pagador", 12, 60); doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.text(filial.toUpperCase(), 12, 64);
-    doc.setFontSize(6); doc.setFont("helvetica", "normal"); doc.text("(=) Valor Doc", 152, 60); doc.text(`R$ ${fatura.base.toFixed(2)}`, 152, 64); doc.text("(+) Multa/Juros", 152, 70); doc.text(`R$ ${(fatura.multa + fatura.juros).toFixed(2)}`, 152, 74);
-    doc.text("(=) Cobrado", 152, 80); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text(`R$ ${fatura.total.toFixed(2)}`, 152, 86);
-    doc.setLineDashPattern([2, 2], 0); doc.line(10, 110, 200, 110); doc.setLineDashPattern([], 0);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16); doc.text("Banco TermoSync S.A.", 10, 130); doc.setFontSize(14); doc.text("| 001-9 |", 70, 130); doc.setFontSize(11); doc.text("00190.00009 01234.567890 00000.000000 1 89000000000000", 95, 130);
-    doc.setLineWidth(0.2); doc.rect(10, 135, 190, 80); doc.line(10, 145, 200, 145); doc.line(10, 155, 200, 155); doc.line(10, 165, 200, 165); doc.line(150, 135, 150, 215);
-    doc.setFontSize(6); doc.setFont("helvetica", "normal");
-    doc.text("Local de Pagamento", 12, 138); doc.text("Pagável em qualquer banco até o vencimento.", 12, 143);
-    doc.text("Vencimento", 152, 138); doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.text(`${billingSetup.diaVencimento}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`, 152, 143);
-    doc.setFontSize(6); doc.setFont("helvetica", "normal");
-    doc.text("Beneficiário", 12, 148); doc.text("TermoSync Corp LTDA - CNPJ 12.345.678/0001-90", 12, 153);
-    doc.text("Agência / Cód", 152, 148); doc.text("0001 / 12345-6", 152, 153);
-    doc.text("Uso do Banco", 12, 158); doc.text("Carteira", 50, 158); doc.text("17", 50, 163); doc.text("Espécie", 80, 158); doc.text("R$", 80, 163);
-    doc.text("(=) Valor do Documento", 152, 158); doc.text(`R$ ${fatura.base.toFixed(2)}`, 152, 163);
-    doc.text("Instruções", 12, 170); doc.text(`Multa de ${billingSetup.multa}% e juros de ${billingSetup.juros}% após vencimento.`, 12, 175);
-    doc.text("(=) Valor Cobrado", 152, 170); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text(`R$ ${fatura.total.toFixed(2)}`, 152, 178);
-    doc.setFontSize(7); doc.setFont("helvetica", "bold");
-    doc.text("Pagador", 12, 200); doc.setFont("helvetica", "normal"); doc.text(`${filial} - CNPJ: 98.765.432/0001-10`, 12, 205);
-
-    drawBarcode(doc, 10, 230, 100, 15);
-
-    doc.save(`Boleto_${filial}_${Date.now()}.pdf`);
-    addLog(`[BILLING] Boleto gerado para ${filial}.`, 'success'); showToast('Boleto Bancário gerado.', 'success');
+    simularGeracao('Boleto', filial, () => {
+      const doc = new jsPDF('p', 'mm', 'a4'); doc.setFont("helvetica", "bold");
+      doc.setFontSize(10); doc.text("RECIBO DO PAGADOR", 10, 20); doc.setLineWidth(0.5); doc.line(10, 22, 200, 22);
+      doc.setFontSize(16); doc.text("Banco TermoSync S.A.", 10, 30); doc.setFontSize(14); doc.text("| 001-9 |", 70, 30); doc.setFontSize(11); doc.text("00190.00009 01234.567890 00000.000000 1 89000000000000", 95, 30);
+      doc.setLineWidth(0.2); doc.rect(10, 35, 190, 60); doc.line(10, 45, 200, 45); doc.line(10, 55, 200, 55); doc.line(150, 35, 150, 95);
+      doc.setFontSize(6); doc.setFont("helvetica", "normal"); doc.text("Local de Pagamento", 12, 38); doc.text("Pagável em qualquer banco até o vencimento.", 12, 42);
+      doc.text("Vencimento", 152, 38); doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.text(`${billingSetup.diaVencimento}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`, 152, 42);
+      doc.setFontSize(6); doc.setFont("helvetica", "normal"); doc.text("Beneficiário", 12, 48); doc.text("TermoSync Corp LTDA - CNPJ 12.345.678/0001-90", 12, 52); doc.text("Agência / Cód", 152, 48); doc.text("0001 / 12345-6", 152, 52);
+      doc.text("Pagador", 12, 60); doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.text(filial.toUpperCase(), 12, 64);
+      doc.setFontSize(6); doc.setFont("helvetica", "normal"); doc.text("(=) Valor Doc", 152, 60); doc.text(`R$ ${fatura.base.toFixed(2)}`, 152, 64); doc.text("(+) Multa/Juros", 152, 70); doc.text(`R$ ${(fatura.multa + fatura.juros).toFixed(2)}`, 152, 74);
+      doc.text("(=) Cobrado", 152, 80); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text(`R$ ${fatura.total.toFixed(2)}`, 152, 86);
+      doc.setLineDashPattern([2, 2], 0); doc.line(10, 110, 200, 110); doc.setLineDashPattern([], 0);
+      drawBarcode(doc, 10, 230, 100, 15);
+      doc.save(`Boleto_${filial}_${Date.now()}.pdf`);
+      addLog(`[BILLING] Boleto gerado para ${filial}.`, 'success'); 
+      showToast('Boleto Bancário gerado.', 'success');
+    });
   };
 
   const dispararCobrancaEmLote = () => {
     addLog(`[CRON] Rotina de emissão em lote iniciada para ${filiaisDb?.length} clientes...`, 'warning');
-    setTimeout(() => { showToast('Faturamento em lote concluído.', 'success'); addLog('[CRON] Sucesso: Lote processado.', 'success'); }, 1500);
+    setTimeout(() => { showToast('Faturamento em lote concluído.', 'success'); addLog('[CRON] Lote processado.', 'success'); }, 1500);
   };
 
   return (
     <div className="dev-tela-scroll">
       <div className="flex-header" style={{ padding: 0, background: 'transparent', boxShadow: 'none', marginBottom: '0' }}>
-        <div className="dev-card" style={{ width: '100%', background: 'linear-gradient(90deg, #0f172a, #0b1120)' }}>
-          <div className="dev-card-header" style={{ color: '#eab308', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <div className="dev-card glass-card" style={{ width: '100%', borderTop: '4px solid #eab308' }}>
+          <div className="dev-card-header flex-between" style={{ color: '#eab308', marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Settings2 size={20} /><h3>Centro de Operações Financeiras (RevOps)</h3></div>
-            <button className="btn btn-primary" onClick={dispararCobrancaEmLote} style={{ fontSize: '0.8rem', padding: '6px 12px' }}><RefreshCw size={14} /> Faturar Lote (CRON)</button>
+            <button className="btn btn-primary" onClick={dispararCobrancaEmLote} style={{ fontSize: '0.8rem', padding: '8px 16px', background: '#eab308', color: '#0f172a', fontWeight: 'bold' }}><RefreshCw size={14} /> Processar Lote (CRON)</button>
           </div>
           <div className="billing-config-grid">
             <div className="config-box"><label>Plano PRO (R$)</label><div className="config-input-wrapper"><DollarSign size={14} /><input type="number" step="0.1" value={billingSetup.pro} onChange={(e) => updateSetup('pro', e.target.value)} /></div></div>
@@ -578,23 +937,19 @@ const TelaBilling = ({ sysConfig, filiaisDb, showToast, addLog }) => {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '1.5rem', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div className="dev-card saas-kpi-card" style={{ margin: 0 }}><div className="kpi-icon-wrapper" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}><TrendingUp size={28} /></div><div className="kpi-data"><span className="kpi-label">MRR ESTIMADO</span><span className="kpi-value">R$ {metricasFinanceiras.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div></div>
-          <div className="dev-card saas-kpi-card" style={{ margin: 0 }}><div className="kpi-icon-wrapper" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}><AlertTriangle size={28} /></div><div className="kpi-data"><span className="kpi-label">DÍVIDA CLIENTES</span><span className="kpi-value" style={{ color: 'var(--danger)' }}>R$ {metricasFinanceiras.inadimplencia.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div></div>
+          <div className="dev-card glass-card saas-kpi-card" style={{ margin: 0, borderLeft: '4px solid #10b981' }}><div className="kpi-icon-wrapper" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}><TrendingUp size={28} /></div><div className="kpi-data"><span className="kpi-label">MRR ESTIMADO (MENSAL)</span><span className="kpi-value" style={{color: 'white', fontFamily: 'JetBrains Mono'}}>R$ {metricasFinanceiras.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div></div>
+          <div className="dev-card glass-card saas-kpi-card" style={{ margin: 0, borderLeft: '4px solid #ef4444' }}><div className="kpi-icon-wrapper" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}><AlertTriangle size={28} /></div><div className="kpi-data"><span className="kpi-label">DÍVIDA DE CLIENTES</span><span className="kpi-value" style={{ color: 'var(--danger)', fontFamily: 'JetBrains Mono' }}>R$ {metricasFinanceiras.inadimplencia.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div></div>
         </div>
 
-        <div className="dev-card" style={{ margin: 0, padding: '1rem', display: 'flex', flexDirection: 'column' }}>
+        <div className="dev-card glass-card" style={{ margin: 0, padding: '1rem', display: 'flex', flexDirection: 'column' }}>
           <div className="dev-card-header" style={{ color: '#10b981', marginBottom: '10px' }}><LineChart size={18} /> <h3 style={{ fontSize: '0.9rem' }}>Evolução do MRR (6 Meses)</h3></div>
-          <div style={{ flex: 1, width: '100%', minHeight: '140px' }}>
+          <div className="chart-container" style={{ flex: 1, margin: 0, minHeight: '140px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dadosGraficoReceita} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorMrr" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+                <defs><linearGradient id="colorMrr" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient></defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="mes" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                <RechartsTooltip contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px' }} itemStyle={{ color: '#10b981', fontWeight: 'bold' }} formatter={(value) => `R$ ${value.toFixed(2)}`} />
+                <RechartsTooltip contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', color: 'white', fontSize: '12px' }} itemStyle={{ color: '#10b981', fontWeight: 'bold' }} formatter={(value) => `R$ ${value.toFixed(2)}`} />
                 <Area type="monotone" dataKey="receita" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorMrr)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -602,171 +957,60 @@ const TelaBilling = ({ sysConfig, filiaisDb, showToast, addLog }) => {
         </div>
       </div>
 
-      <div className="dev-card">
-        <div className="dev-card-header" style={{ color: '#eab308' }}><Receipt size={20} /><h3>Faturas Emitidas (Ciclo Atual)</h3></div>
-        <div className="saas-clients-table">
-          <div className="saas-table-header" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 150px' }}>
-            <div>Cliente Pagador</div><div>Plano Base</div><div>Multa/Juros</div><div>Total (R$)</div><div>Status</div><div style={{ textAlign: 'center' }}>Geração Real</div>
-          </div>
+      <div className="dev-card glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="dev-card-header" style={{ color: '#eab308', padding: '1.5rem', marginBottom: 0 }}><Receipt size={20} /><h3>Faturas Emitidas (Ciclo Atual)</h3></div>
+        
+        <div className="saas-table-header billing-grid-cols">
+          <div>Cliente Pagador</div><div>Plano Base</div><div>Multa/Juros</div><div>Total (R$)</div><div style={{ textAlign: 'center' }}>Status</div><div style={{ textAlign: 'center' }}>Ações de Faturação</div>
+        </div>
 
+        <div style={{maxHeight: '400px', overflowY: 'auto'}}>
           {filiaisDb?.map((filial, index) => {
             const planoAtual = sysConfig.planos?.[filial] || 'FREE';
-            const fatura = getDetalhesFatura(planoAtual, planoAtual === 'SUSPENSO');
+            const fatura = getDetalhesFatura(filial, planoAtual, planoAtual === 'SUSPENSO');
             if (!fatura) return null;
-
             const isLate = fatura.status === 'VENCIDA' || fatura.status === 'ATRASADA';
 
             return (
-              <div className={`saas-client-row ${isLate ? 'row-suspended' : ''}`} key={index} style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 150px' }}>
-                <div className="client-name">{filial}</div>
+              <div className={`saas-client-row billing-grid-cols ${isLate ? 'row-suspended' : ''}`} key={index}>
+                <div style={{fontWeight: '800', color: 'white'}}>{filial}</div>
                 <div style={{ color: 'var(--text-muted)' }}>R$ {fatura.base.toFixed(2)}</div>
                 <div style={{ color: isLate ? 'var(--danger)' : 'var(--text-muted)' }}>R$ {(fatura.multa + fatura.juros).toFixed(2)}</div>
-                <div style={{ fontWeight: '900', color: 'var(--text-main)' }}>R$ {fatura.total.toFixed(2)}</div>
-                <div><span className={`status-badge ${isLate ? 'danger' : 'success'}`}>{fatura.status}</span></div>
-                <div style={{ textAlign: 'center', display: 'flex', gap: '5px', justifyContent: 'center' }}>
-                  <button className="btn-icon-small" title="Gerar NF-e (PDF)" onClick={() => gerarNotaFiscalPDF(filial, fatura)}><FileText size={16} /></button>
-                  <button className="btn-icon-small" title="Gerar Boleto (PDF)" onClick={() => gerarBoletoPDF(filial, fatura)}><Banknote size={16} /></button>
-                  {isLate && <button className="btn-icon-small danger-text" title="Notificar Cobrança" onClick={() => { addLog(`Aviso enviado a ${filial}.`, 'warning'); showToast('Aviso disparado.', 'info'); }}><Mail size={16} /></button>}
+                <div style={{ fontWeight: '900', color: 'var(--primary)', fontSize: '1rem', fontFamily: 'JetBrains Mono' }}>R$ {fatura.total.toFixed(2)}</div>
+                <div style={{ textAlign: 'center' }}><span className={`status-badge ${isLate ? 'danger' : 'success'}`}>{fatura.status}</span></div>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                  {!fatura.foiPaga && <button className="btn-icon-small" title="Confirmar Pagamento Manual" onClick={() => confirmarPagamento(filial)} style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)' }}><CheckCircle2 size={16} /></button>}
+                  <button className="btn-icon-small" title="Gerar NF-e (PDF)" onClick={() => gerarNotaFiscalPDF(filial, fatura)} disabled={isGenerating !== null}>
+                    {isGenerating === `NFe_${filial}` ? <Loader2 size={16} className="spin" /> : <FileText size={16} />}
+                  </button>
+                  <button className="btn-icon-small" title="Gerar Boleto (PDF)" onClick={() => gerarBoletoPDF(filial, fatura)} disabled={isGenerating !== null}>
+                     {isGenerating === `Boleto_${filial}` ? <Loader2 size={16} className="spin" /> : <Banknote size={16} />}
+                  </button>
+                  {isLate && !fatura.foiPaga && <button className="btn-icon-small danger-text" title="Notificar Cobrança" onClick={() => { addLog(`Aviso de cobrança enviado a ${filial}.`, 'warning'); showToast('Aviso disparado.', 'info'); }}><Mail size={16} /></button>}
                 </div>
               </div>
             );
           })}
-
-          {filiaisDb?.filter(f => sysConfig.planos?.[f] !== 'FREE' || sysConfig.planos?.[f] === 'SUSPENSO').length === 0 && (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic' }}>Não existem faturas ativas no sistema de cobrança.</div>
-          )}
         </div>
       </div>
     </div>
   );
 };
 
-const TelaSistema = ({ api, showToast, addLog, sysConfig, updateSysConfig }) => {
-  const [health, setHealth] = useState({ db: 'ONLINE', sockets: 3, total_records: 12450 });
-  const [globalBanner, setGlobalBanner] = useState(sysConfig?.regras?.GLOBAL?.features?.globalBanner || '');
-
-  const carregarSaude = async () => {
-    try {
-      const res = await api.get('/system/health');
-      setHealth(res.data);
-    } catch (e) {}
-  };
-
-  useEffect(() => { carregarSaude(); }, []);
-
-  const handleSalvarBanner = () => {
-    updateSysConfig('ROLE', 'GLOBAL', 'features', 'globalBanner', globalBanner);
-    addLog(`[MSG] Banner global atualizado: ${globalBanner}`, 'warning');
-    showToast('Comunicado global atualizado.', 'success');
-  };
-
-  const handlePurge = async () => {
-    if(!window.confirm("ATENÇÃO: Esta ação é irreversível. Deseja apagar dados com mais de 90 dias?")) return;
-    try {
-      const res = await api.post('/system/purge', { dias: 90 });
-      showToast(`Registros antigos apagados com sucesso.`, 'success');
-      addLog(`[DB] Exclusão executada: ${res.data.deleted || 0} linhas removidas do cluster MySQL.`, 'error');
-      carregarSaude();
-    } catch (e) { showToast('Falha na exclusão.', 'error'); }
-  };
-
-  return (
-    <div className="dev-tela-scroll">
-      <div className="dev-grid">
-        <div className="dev-col-left">
-          <div className="dev-card">
-            <div className="dev-card-header" style={{color: 'var(--warning)'}}><Mail size={20}/><h3>Comunicado de Sistema (Broadcasting)</h3></div>
-            <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '1rem'}}>Esta mensagem aparecerá no topo de todos os painéis da rede, ideal para avisos de manutenção.</p>
-            <textarea 
-              className="textarea-input w-100" 
-              style={{minHeight: '80px', marginBottom: '10px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', color: 'var(--text-main)', padding: '10px', borderRadius: '8px', outline: 'none'}} 
-              placeholder="Ex: Manutenção agendada para hoje às 23:00..."
-              value={globalBanner}
-              onChange={e => setGlobalBanner(e.target.value)}
-            />
-            <button className="btn btn-primary w-100" onClick={handleSalvarBanner}>
-               <Send size={16}/> TRANSMITIR PARA TODA A REDE
-            </button>
-          </div>
-
-          <div className="dev-card">
-            <div className="dev-card-header" style={{color: 'var(--success)'}}><Activity size={20}/><h3>Status dos Microsserviços</h3></div>
-            <div className="saas-clients-table">
-               <div className="saas-client-row" style={{gridTemplateColumns: '1fr auto', padding: '10px 15px'}}>
-                  <span>Cluster MySQL de Persistência</span><span className="status-badge success">{health.db}</span>
-               </div>
-               <div className="saas-client-row" style={{gridTemplateColumns: '1fr auto', padding: '10px 15px'}}>
-                  <span>Túneis WebSocket Ativos</span><span className="status-badge success">{health.sockets} Conexões</span>
-               </div>
-               <div className="saas-client-row" style={{gridTemplateColumns: '1fr auto', padding: '10px 15px'}}>
-                  <span>WhatsApp API Gateway</span><span className="status-badge success">READY</span>
-               </div>
-               <div className="saas-client-row" style={{gridTemplateColumns: '1fr auto', padding: '10px 15px', borderBottom: 'none'}}>
-                  <span>Volume de Telemetria (Total)</span><span style={{fontWeight: 'bold', color: 'var(--primary)'}}>{health.total_records.toLocaleString()} Linhas</span>
-               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="dev-col-right">
-           <div className="dev-card">
-            <div className="dev-card-header" style={{color: 'var(--primary)'}}><BrainCircuit size={20}/><h3>Inteligência de Disparo (SLA)</h3></div>
-            <div className="config-box" style={{marginBottom: '1.5rem'}}>
-               <label style={{color: 'var(--text-main)', marginBottom: '8px', display: 'block', fontWeight: 'bold'}}>Delay para Alerta de Porta (Minutos)</label>
-               <input type="range" min="1" max="30" defaultValue="5" className="w-100" />
-            </div>
-            <div className="config-box" style={{marginBottom: '1.5rem'}}>
-               <label style={{color: 'var(--text-main)', marginBottom: '8px', display: 'block', fontWeight: 'bold'}}>Tolerância de Oscilação Térmica (Delta °C)</label>
-               <input type="range" min="0.1" max="5.0" step="0.1" defaultValue="1.5" className="w-100" />
-            </div>
-            <p className="text-muted" style={{fontSize: '0.75rem', lineHeight: '1.4', margin: 0}}>Estes parâmetros definem a rapidez com que a sirene toca no NOC após o servidor detectar uma variação física enviada pelos sensores IoT.</p>
-          </div>
-
-          <div className="dev-card danger-zone">
-            <div className="dev-card-header" style={{color: 'var(--danger)'}}><Eraser size={20}/><h3>Manutenção Destrutiva</h3></div>
-            <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '15px'}}>Ações de limpeza profunda para otimização de queries no banco de dados principal.</p>
-            <button className="btn btn-outline w-100" onClick={handlePurge} style={{color: 'var(--danger)', borderColor: 'var(--danger)', marginBottom: '10px', display: 'flex', justifyContent: 'center', gap: '8px', padding: '10px'}}>
-               <Database size={16}/> APAGAR DADOS ANTIGOS (+90 DIAS)
-            </button>
-            <button className="btn btn-outline w-100" style={{display: 'flex', justifyContent: 'center', gap: '8px', padding: '10px', color: 'var(--text-main)', borderColor: 'var(--border)'}} onClick={() => {showToast('Dump SQL iniciado em background.', 'info'); addLog('Backup lógico solicitado pelo root.', 'info')}}>
-               <FileOutput size={16}/> EXPORTAR DUMP DE SEGURANÇA (SQL)
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const TelaSOC = ({ api, showToast, addLog }) => {
+// ============================================================================
+// 7. TELA SOC (AUDITORIA E ZERO-TRUST)
+// ============================================================================
+const TelaSOC = ({ api, showToast, addLog, setModalConfig }) => {
   const [activeSessions, setActiveSessions] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const carregarDadosSOC = useCallback(async () => {
     try {
-      const [resSessoes, resAuditoria] = await Promise.all([
-        api.get('/soc/sessoes'),
-        api.get('/soc/auditoria')
-      ]);
-      
-      const sessoesFormatadas = resSessoes.data.map(s => ({
-        ...s,
-        loginTime: new Date(s.loginTime).toLocaleString()
-      }));
-      
-      const auditoriaFormatada = resAuditoria.data.map(a => ({
-        ...a,
-        time: new Date(a.data_hora).toLocaleString()
-      }));
-
-      setActiveSessions(sessoesFormatadas);
-      setAuditLogs(auditoriaFormatada);
-    } catch (e) {
-      // Falha silenciosa para evitar spam de toasts no auto-refresh
-    } finally {
-      setIsLoading(false);
-    }
+      const [resSessoes, resAuditoria] = await Promise.all([api.get('/soc/sessoes'), api.get('/soc/auditoria')]);
+      setActiveSessions(resSessoes.data.map(s => ({ ...s, loginTime: new Date(s.loginTime).toLocaleString() })));
+      setAuditLogs(resAuditoria.data.map(a => ({ ...a, time: new Date(a.data_hora).toLocaleString() })));
+    } catch (e) { } finally { setIsLoading(false); }
   }, [api]);
 
   useEffect(() => {
@@ -775,86 +1019,93 @@ const TelaSOC = ({ api, showToast, addLog }) => {
     return () => clearInterval(interval);
   }, [carregarDadosSOC]);
 
-  const handleRevoke = async (id, user) => {
-    try {
-      await api.post(`/soc/revogar/${id}`);
-      setActiveSessions(prev => prev.filter(s => s.id !== id));
-      showToast(`Token JWT revogado. A conexão de ${user} foi derrubada.`, 'success');
-      addLog(`[SOC] Sessão forçada ao encerramento: ${user}`, 'error');
-      carregarDadosSOC(); 
-    } catch (e) {
-      showToast('Erro ao revogar sessão.', 'error');
-    }
+  const handleRevoke = (id, user) => {
+    setModalConfig({
+      isOpen: true,
+      title: 'Revogar Acesso JWT',
+      message: `Deseja realmente derrubar a conexão em tempo real do usuário ${user}? O token JWT será invalidado imediatamente e registrado na auditoria.`,
+      onConfirm: async () => {
+        try {
+          await api.post(`/soc/revogar/${id}`);
+          setActiveSessions(prev => prev.filter(s => s.id !== id));
+          showToast(`Sessão de ${user} encerrada.`, 'success');
+          addLog(`[SOC] Sessão forçada ao encerramento: ${user}`, 'error');
+          carregarDadosSOC(); 
+        } catch (e) { showToast('Erro ao revogar sessão.', 'error'); }
+      }
+    });
   };
+
+  const exportarLogsCSV = () => {
+    if (auditLogs.length === 0) return showToast('Não há registros para exportar.', 'warning');
+    let csvContent = "Data/Hora,Ação Realizada,Ator,Alvo,Severidade\n";
+    auditLogs.forEach(log => { csvContent += `"${log.time}","${log.action}","${log.actor}","${log.target}","${log.severity.toUpperCase()}"\n`; });
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Auditoria_ZeroTrust_SOC_${Date.now()}.csv`;
+    link.click();
+    showToast('Logs exportados em CSV.', 'success');
+    addLog('[SOC] Exportação de arquivo CSV de Auditoria concluída.', 'success');
+  };
+
+  const score = Math.max(0, 100 - (auditLogs.filter(l => l.severity === 'danger').length * 5));
 
   return (
     <div className="dev-tela-scroll">
-      <div className="dev-grid">
+      <div className="dev-grid-main">
         <div className="dev-col-left">
-          
-          <div className="dev-card">
-            <div className="dev-card-header" style={{color: '#a855f7'}}><Fingerprint size={20}/><h3>Sessões JWT Ativas</h3></div>
-            <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '15px'}}>Monitorização Zero-Trust em tempo real.</p>
+          <div className="dev-card glass-card" style={{ padding: 0, overflow: 'hidden', borderTop: '4px solid #a855f7' }}>
+            <div className="dev-card-header flex-between" style={{color: '#a855f7', padding: '1.5rem', marginBottom: 0}}>
+              <div style={{display:'flex', gap:'8px', alignItems:'center'}}><FingerprintIcon size={20}/><h3>Sessões JWT Ativas</h3></div>
+              <span className="status-badge" style={{background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', border: '1px solid rgba(168, 85, 247, 0.3)'}}>Zero-Trust Ativado</span>
+            </div>
             
-            <div className="saas-clients-table">
-              <div className="saas-table-header" style={{ gridTemplateColumns: '1fr 1fr 1fr 80px' }}>
-                <div>Usuário</div><div>Endereço IP</div><div>Hora do Login</div><div style={{textAlign: 'right'}}>Ação</div>
-              </div>
-              
-              {isLoading && <div style={{padding: '2rem', textAlign: 'center', color: 'var(--text-muted)'}}>Analisando tráfego de rede...</div>}
-              
-              {!isLoading && activeSessions.map((session) => (
-                <div key={session.id} className="saas-client-row" style={{ gridTemplateColumns: '1fr 1fr 1fr 80px' }}>
-                  <div>
-                    <div style={{fontWeight: 'bold', color: 'var(--text-main)'}}>{session.usuario}</div>
-                    <div style={{fontSize: '0.7rem', color: 'var(--primary)'}}>{session.role}</div>
-                  </div>
-                  <div>
-                    <div style={{fontFamily: 'monospace', color: 'var(--text-muted)'}}>{session.ip === '::1' ? 'Localhost' : session.ip}</div>
-                    <div style={{fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px'}}><MapPin size={10}/>{session.location}</div>
-                  </div>
-                  <div style={{color: 'var(--text-muted)', fontSize: '0.8rem'}}>{session.loginTime}</div>
-                  <div style={{textAlign: 'right'}}>
-                    <button className="btn-icon-small danger-text" title="Derrubar Conexão (Revoke)" onClick={() => handleRevoke(session.id, session.usuario)}>
-                      <UserX size={16} />
-                    </button>
-                  </div>
+            <div className="saas-table-header soc-grid-cols">
+              <div>Usuário</div><div>IP / Location</div><div>Login</div><div style={{textAlign: 'right'}}>Ação</div>
+            </div>
+            
+            <div style={{maxHeight: '500px', overflowY: 'auto'}}>
+              {isLoading && <div style={{padding: '3rem', display: 'flex', justifyContent: 'center', color: 'var(--text-muted)'}}><Loader2 className="spin" size={32} /></div>}
+              {!isLoading && activeSessions.map((s) => (
+                <div key={s.id} className="saas-client-row soc-grid-cols">
+                  <div><div style={{fontWeight: '800', color: 'white'}}>{s.usuario}</div><div style={{fontSize: '0.7rem', color: '#a855f7', marginTop: '2px'}}>{s.role}</div></div>
+                  <div><div style={{fontFamily: 'JetBrains Mono', color: 'var(--text-muted)'}}>{s.ip === '::1' ? 'Localhost' : s.ip}</div><div style={{fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px'}}><MapPin size={10}/>{s.location}</div></div>
+                  <div style={{color: 'var(--text-muted)', fontSize: '0.8rem'}}>{s.loginTime}</div>
+                  <div style={{display: 'flex', justifyContent: 'flex-end'}}><button className="btn-icon-small danger-text" title="Derrubar Conexão (Revoke)" onClick={() => handleRevoke(s.id, s.usuario)}><UserX size={16} /></button></div>
                 </div>
               ))}
-              {!isLoading && activeSessions.length === 0 && <div style={{padding: '1rem', textAlign: 'center', color: 'var(--text-muted)'}}>Nenhuma sessão ativa encontrada.</div>}
+              {!isLoading && activeSessions.length === 0 && <div style={{padding: '2rem', textAlign: 'center', color: 'var(--text-muted)'}}>Nenhuma sessão ativa encontrada.</div>}
             </div>
           </div>
-
         </div>
 
         <div className="dev-col-right">
-          
-          <div className="dev-card">
-            <div className="dev-card-header" style={{color: 'var(--info)'}}><History size={20}/><h3>Ledger de Auditoria (Imutável)</h3></div>
-            <p className="text-muted" style={{fontSize: '0.8rem', marginBottom: '15px'}}>Registro cronológico de operações críticas para compliance.</p>
-            
-            <div style={{display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto', paddingRight: '5px'}}>
-              {isLoading && <div style={{textAlign: 'center', color: 'var(--text-muted)', padding: '1rem'}}>Lendo logs do banco de dados...</div>}
-              
-              {!isLoading && auditLogs.map((log, idx) => (
-                <div key={idx} style={{background: 'var(--bg-color)', borderLeft: `3px solid var(--${log.severity})`, padding: '10px 15px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
-                    <span style={{color: `var(--${log.severity})`, fontWeight: 'bold', fontSize: '0.8rem'}}>{log.action}</span>
-                    <span style={{color: 'var(--text-muted)', fontSize: '0.75rem'}}>Alvo: <span style={{color: 'var(--text-main)'}}>{log.target}</span> | Ator: <span style={{color: 'var(--text-main)'}}>{log.actor}</span></span>
-                  </div>
-                  <div style={{fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', textAlign: 'right'}}>
-                    <Clock size={12}/> {log.time}
-                  </div>
-                </div>
-              ))}
-              {!isLoading && auditLogs.length === 0 && <div style={{color: 'var(--text-muted)', fontSize: '0.8rem'}}>O livro-razão está vazio.</div>}
+          <div className="dev-card glass-card" style={{ borderTop: '4px solid var(--info)' }}>
+            <div className="dev-card-header flex-between" style={{color: 'var(--info)'}}>
+              <div style={{display:'flex', gap:'8px', alignItems:'center'}}><History size={20}/><h3>Ledger de Auditoria</h3></div>
+              <div className="status-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${score > 80 ? '#10b981' : (score > 50 ? '#f59e0b' : '#ef4444')}` }}>
+                {score > 80 ? <ShieldCheck size={14} color="#10b981"/> : <ShieldAlert size={14} color={score > 50 ? '#f59e0b' : '#ef4444'}/>}
+                <span style={{ fontSize: '0.8rem', fontWeight: '900', color: score > 80 ? '#10b981' : (score > 50 ? '#f59e0b' : '#ef4444') }}>Score: {score}%</span>
+              </div>
             </div>
             
-            <button className="btn btn-outline w-100" style={{marginTop: '15px', padding: '10px'}} onClick={() => showToast('Exportando Logs para CSV...', 'info')}>
-              <DownloadCloud size={16} style={{marginRight: '8px'}}/> EXPORTAR LOGS COMPLETOS
+            <div style={{display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '400px', overflowY: 'auto', paddingRight: '5px', marginBottom: '15px'}}>
+              {isLoading && <div style={{textAlign: 'center', color: 'var(--text-muted)', padding: '2rem'}}><Loader2 className="spin" size={32}/></div>}
+              {!isLoading && auditLogs.map((log, idx) => (
+                <div key={idx} style={{background: 'rgba(0,0,0,0.3)', borderLeft: `4px solid var(--${log.severity})`, padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)'}}>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                    <span style={{color: `var(--${log.severity})`, fontWeight: '900', fontSize: '0.85rem'}}>{log.action}</span>
+                    <span style={{color: 'var(--text-muted)', fontSize: '0.75rem'}}>Alvo: <span style={{color: 'white', fontWeight: 'bold'}}>{log.target}</span> | Ator: <span style={{color: 'white', fontWeight: 'bold'}}>{log.actor}</span></span>
+                  </div>
+                  <div style={{fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', textAlign: 'right', fontWeight: 'bold'}}><Clock size={12}/> {log.time}</div>
+                </div>
+              ))}
+            </div>
+            <button className="btn btn-outline w-100" style={{padding: '14px', display: 'flex', justifyContent: 'center', gap: '10px', fontWeight: '900', borderRadius: '10px', letterSpacing: '0.5px'}} onClick={exportarLogsCSV}>
+              <DownloadCloud size={18}/> EXPORTAR LOGS (CSV)
             </button>
           </div>
-
         </div>
       </div>
     </div>
@@ -862,164 +1113,121 @@ const TelaSOC = ({ api, showToast, addLog }) => {
 };
 
 // ============================================================================
-// SUB-TELA 6: CENTRO DE INTELIGÊNCIA (BI) - DADOS REAIS DO BANCO DE DADOS
+// 8. TELA BI E RELATÓRIOS
 // ============================================================================
 const TelaBI = ({ api, showToast, addLog, sysConfig, filiaisDb }) => {
-  const gerarRelatorio = async (tipo, tema, cor) => {
-    showToast(`Compilando matriz de dados reais para: ${tipo}...`, 'warning');
-    try {
-      // 1. Registra a ação no Ledger de Auditoria
-      await api.post('/system/reports/log', { tipo, formato: 'PDF', solicitante: 'Root/Dev' });
-      addLog(`[BI] Extração de dados reais iniciada: ${tipo}`, 'info');
+  const [isProcessing, setIsProcessing] = useState(null);
 
-      let head = [];
-      let body = [];
-
-      // 2. BUSCA DINÂMICA DE DADOS NA API (MYSQL)
-      if (tipo === 'AUDITORIA_SOC') {
-        const res = await api.get('/soc/auditoria');
-        head = [['Data/Hora', 'Ação Realizada', 'Ator', 'Alvo', 'Severidade']];
-        body = res.data.map(log => [
-          new Date(log.data_hora).toLocaleString(),
-          log.action,
-          log.actor,
-          log.target,
-          log.severity.toUpperCase()
-        ]);
-        if(body.length === 0) body = [['--', 'Sem registros de auditoria', '--', '--', '--']];
-        
-      } else if (tipo === 'FINOPS_BILLING') {
-        head = [['Cliente Pagador / Tenant', 'Plano Base', 'Custo Mensual', 'Status Financeiro']];
-        body = (filiaisDb || []).map(filial => {
-          const plano = sysConfig?.planos?.[filial] || 'FREE';
-          let valor = plano === 'ENTERPRISE' ? 'R$ 899,90' : (plano === 'PRO' ? 'R$ 299,90' : 'R$ 0,00');
-          let status = plano === 'SUSPENSO' ? 'BLOQUEADO (INADIMPLENTE)' : 'ATIVO / PAGO';
-          return [filial, plano, valor, status];
-        });
-        if(body.length === 0) body = [['--', 'Sem clientes financeiros', '--', '--']];
-        
-      } else if (tipo === 'EDGE_HARDWARE') {
-        const res = await api.get('/hardware');
-        head = [['Edge Node (Máquina)', 'Localização', 'Endereço MAC', 'Sinal (dBm)', 'Uptime', 'Firmware']];
-        body = res.data.map(node => [
-          node.nome,
-          node.filial || 'Principal',
-          node.mac || '00:00:00:00:00:00',
-          `${node.signal_dbm || -100} dBm`,
-          node.uptime || 'N/A',
-          node.fwVersion || 'v1.0.0'
-        ]);
-        if(body.length === 0) body = [['--', 'Nenhum hardware registrado', '--', '--', '--', '--']];
-        
-      } else if (tipo === 'CAOS_RESILIENCIA') {
-        const res = await api.get('/notificacoes/historico');
-        head = [['Data/Hora', 'Máquina (Nó)', 'Tipo de Anomalia', 'Mensagem do Sistema']];
-        body = res.data.slice(0, 50).map(n => [
-          new Date(n.data_hora).toLocaleString(),
-          n.equipamento_nome,
-          n.tipo_alerta,
-          n.mensagem
-        ]);
-        if(body.length === 0) body = [['--', 'Sem anomalias detectadas', '--', '--']];
-
-      } else if (tipo === 'ORGANIZACOES_TENANTS') {
-        const res = await api.get('/empresas');
-        head = [['Organização', 'Registro Legal', 'Contato', 'Email', 'Status']];
-        body = res.data.map(emp => [
-          emp.nome,
-          emp.cnpj || 'ISENTO',
-          emp.contato || 'Não informado',
-          emp.email || 'Não informado',
-          emp.status.toUpperCase()
-        ]);
-        if(body.length === 0) body = [['--', 'Nenhuma organização', '--', '--', '--']];
-
-      } else if (tipo === 'SYSOPS_HEALTH') {
-        const res = await api.get('/system/health');
-        head = [['Métrica Vital do Servidor', 'Valor Atual', 'Status']];
-        body = [
-          ['Status do Cluster MySQL', res.data.db, 'NORMAL'],
-          ['Túneis WebSocket Ativos', `${res.data.sockets} conexão(ões)`, 'NORMAL'],
-          ['Volume de Telemetria (Registros totais)', `${res.data.total_records.toLocaleString()}`, 'NORMAL'],
-          ['Tempo de Atividade (Uptime)', `${Math.floor(res.data.uptime / 60)} minutos`, 'NORMAL']
-        ];
-      }
-
-      // 3. GERAÇÃO DO PDF (PT-BR)
-      const doc = new jsPDF('landscape');
-      doc.setFillColor(cor);
-      doc.rect(0, 0, 300, 20, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "bold");
-      doc.text(`TERMOSYNC ENTERPRISE - RELATÓRIO EXECUTIVO (DADOS REAIS)`, 15, 13);
-      
-      doc.setTextColor(50, 50, 50);
-      doc.setFontSize(14);
-      doc.text(tema, 15, 30);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Data de Emissão: ${new Date().toLocaleString()}`, 15, 36);
-      doc.text(`Classificação: CONFIDENCIAL / USO INTERNO`, 15, 41);
-
-      autoTable(doc, { 
-        head, 
-        body, 
-        startY: 50,
-        headStyles: { fillColor: cor },
-        styles: { fontSize: 9 }
+  const processarDadosRelatorio = async (tipo) => {
+    let head = []; let body = [];
+    if (tipo === 'AUDITORIA_SOC') {
+      const res = await api.get('/soc/auditoria');
+      head = ['Data/Hora', 'Ação Realizada', 'Ator', 'Alvo', 'Severidade'];
+      body = res.data.map(log => [new Date(log.data_hora).toLocaleString(), log.action, log.actor, log.target, log.severity.toUpperCase()]);
+      if(body.length === 0) body = [['--', 'Sem registros', '--', '--', '--']];
+    } else if (tipo === 'FINOPS_BILLING') {
+      head = ['Cliente Pagador / Tenant', 'Plano Base', 'Custo Mensal', 'Status Financeiro'];
+      body = (filiaisDb || []).map(filial => {
+        const plano = sysConfig?.planos?.[filial] || 'FREE';
+        let valor = plano === 'ENTERPRISE' ? 'R$ 899,90' : (plano === 'PRO' ? 'R$ 299,90' : 'R$ 0,00');
+        let status = plano === 'SUSPENSO' ? 'BLOQUEADO' : 'ATIVO';
+        return [filial, plano, valor, status];
       });
-
-      doc.save(`TermoSync_Data_${tipo}_${Date.now()}.pdf`);
-      showToast('Relatório executivo gerado e baixado com sucesso.', 'success');
-    } catch (e) {
-      showToast('Erro ao compilar o relatório. Verifique a conexão com o banco de dados.', 'error');
-      console.error(e);
+      if(body.length === 0) body = [['--', 'Sem clientes', '--', '--']];
+    } else if (tipo === 'EDGE_HARDWARE') {
+      const res = await api.get('/hardware');
+      head = ['Edge Node (Máquina)', 'Localização', 'Endereço MAC', 'Sinal (dBm)', 'Uptime', 'Firmware'];
+      body = res.data.map(node => [node.nome, node.filial || 'Principal', node.mac || '00:00:00:00:00:00', `${node.signal_dbm || -100} dBm`, node.uptime || 'N/A', node.fwVersion || 'v1.0.0']);
+      if(body.length === 0) body = [['--', 'Nenhum hardware', '--', '--', '--', '--']];
+    } else if (tipo === 'CAOS_RESILIENCIA') {
+      const res = await api.get('/notificacoes/historico');
+      head = ['Data/Hora', 'Máquina (Nó)', 'Tipo de Anomalia', 'Mensagem do Sistema'];
+      body = res.data.slice(0, 50).map(n => [new Date(n.data_hora).toLocaleString(), n.equipamento_nome, n.tipo_alerta, n.mensagem]);
+      if(body.length === 0) body = [['--', 'Sem anomalias detectadas', '--', '--']];
+    } else if (tipo === 'ORGANIZACOES_TENANTS') {
+      const res = await api.get('/empresas');
+      head = ['Organização', 'Registro Legal', 'Contato', 'Email', 'Status'];
+      body = res.data.map(emp => [emp.nome, emp.cnpj || 'ISENTO', emp.contato || 'Não informado', emp.email || 'Não informado', emp.status.toUpperCase()]);
+      if(body.length === 0) body = [['--', 'Nenhuma organização', '--', '--', '--']];
+    } else if (tipo === 'SYSOPS_HEALTH') {
+      const res = await api.get('/system/health');
+      head = ['Métrica Vital do Servidor', 'Valor Atual', 'Status'];
+      body = [
+        ['Status do Cluster MySQL', res.data.db, 'NORMAL'],
+        ['Túneis WebSocket Ativos', `${res.data.sockets} conexão(ões)`, 'NORMAL'],
+        ['Volume de Telemetria (Registros)', `${res.data.total_records}`, 'NORMAL'],
+        ['Tempo de Atividade (Uptime)', `${Math.floor(res.data.uptime / 60)} min`, 'NORMAL']
+      ];
     }
+    return { head, body };
+  };
+
+  const gerarRelatorioPDF = async (tipo, tema, cor) => {
+    setIsProcessing(`PDF_${tipo}`);
+    showToast(`Compilando PDF: ${tipo}...`, 'warning');
+    try {
+      await api.post('/system/reports/log', { tipo, formato: 'PDF', solicitante: 'Root/Dev' });
+      addLog(`[BI] Extração de PDF iniciada: ${tipo}`, 'info');
+      const { head, body } = await processarDadosRelatorio(tipo);
+      const doc = new jsPDF('landscape');
+      doc.setFillColor(cor); doc.rect(0, 0, 300, 20, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.setFont("helvetica", "bold");
+      doc.text(`TERMOSYNC ENTERPRISE - RELATÓRIO EXECUTIVO`, 15, 13);
+      doc.setTextColor(50, 50, 50); doc.setFontSize(14); doc.text(tema, 15, 30);
+      doc.setFontSize(10); doc.setFont("helvetica", "normal");
+      doc.text(`Emissão: ${new Date().toLocaleString()} | Uso Interno`, 15, 36);
+      autoTable(doc, { head: [head], body: body, startY: 45, headStyles: { fillColor: cor }, styles: { fontSize: 9 } });
+      doc.save(`TermoSync_Report_${tipo}_${Date.now()}.pdf`);
+      showToast('Relatório PDF baixado.', 'success');
+    } catch (e) { showToast('Erro no PDF.', 'error'); }
+    setIsProcessing(null);
+  };
+
+  const gerarRelatorioCSV = async (tipo) => {
+    setIsProcessing(`CSV_${tipo}`);
+    showToast(`Extraindo CSV: ${tipo}...`, 'warning');
+    try {
+      await api.post('/system/reports/log', { tipo, formato: 'CSV', solicitante: 'Root/Dev' });
+      addLog(`[BI] Extração de CSV iniciada: ${tipo}`, 'info');
+      const { head, body } = await processarDadosRelatorio(tipo);
+      let csvContent = head.map(h => `"${h}"`).join(',') + '\n';
+      body.forEach(row => { csvContent += row.map(val => `"${val}"`).join(',') + '\n'; });
+      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob); link.download = `Data_${tipo}_${Date.now()}.csv`;
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      showToast('CSV baixado.', 'success');
+    } catch (e) { showToast('Erro no CSV.', 'error'); }
+    setIsProcessing(null);
   };
 
   const modulosBI = [
-    { id: 'FINOPS_BILLING', titulo: 'Core Financeiro (RevOps)', desc: 'Exporta a relação completa de MRR, inadimplência e faturas emitidas por organização.', icon: DollarSign, color: '#10b981' },
-    { id: 'AUDITORIA_SOC', titulo: 'Auditoria e Zero-Trust (SOC)', desc: 'Extrato oficial e imutável de logins, revogações de acesso e purgas do banco de dados.', icon: ShieldCheck, color: '#a855f7' },
-    { id: 'EDGE_HARDWARE', titulo: 'Inventário Edge Computing', desc: 'Mapeamento global da frota de microcontroladores, sinal Wi-Fi, uptimes e versões de firmware.', icon: Server, color: '#38bdf8' },
-    { id: 'CAOS_RESILIENCIA', titulo: 'Auditoria de Resiliência (Chaos)', desc: 'Relatório das anomalias injetadas ou detectadas no sistema e os tempos de resposta do servidor.', icon: Cpu, color: '#ef4444' },
-    { id: 'ORGANIZACOES_TENANTS', titulo: 'Ecossistema de Organizações', desc: 'Lista de todos os tenants registrados, capacidades de storage contratadas e responsáveis legais.', icon: Building2, color: '#f59e0b' },
-    { id: 'SYSOPS_HEALTH', titulo: 'Saúde da Plataforma (SysOps)', desc: 'Métricas vitais do cluster Node.js, conexões WebSocket simultâneas e volume de carga no banco MySQL.', icon: Activity, color: '#6366f1' }
+    { id: 'FINOPS_BILLING', titulo: 'Core Financeiro (RevOps)', desc: 'Relação completa de MRR, inadimplência e faturas.', icon: DollarSign, color: '#10b981' },
+    { id: 'AUDITORIA_SOC', titulo: 'Auditoria Zero-Trust (SOC)', desc: 'Extrato oficial e imutável de logins e purgas do banco de dados.', icon: ShieldCheck, color: '#a855f7' },
+    { id: 'EDGE_HARDWARE', titulo: 'Inventário Edge Computing', desc: 'Mapeamento global da frota de microcontroladores (MAC/Wi-Fi).', icon: Server, color: '#38bdf8' },
+    { id: 'CAOS_RESILIENCIA', titulo: 'Auditoria de Resiliência', desc: 'Relatório das anomalias injetadas ou detectadas no sistema.', icon: Cpu, color: '#ef4444' },
+    { id: 'ORGANIZACOES_TENANTS', titulo: 'Ecossistema de Tenants', desc: 'Lista de todos os clientes registrados, capacidades e responsáveis.', icon: Building2, color: '#f59e0b' },
+    { id: 'SYSOPS_HEALTH', titulo: 'Saúde da Plataforma (SysOps)', desc: 'Métricas vitais do cluster Node.js, WebSocket e carga MySQL.', icon: Activity, color: '#6366f1' }
   ];
 
   return (
     <div className="anim-fade-in stagger-1 dev-tela-scroll">
       <div className="flex-header" style={{ padding: 0, background: 'transparent', boxShadow: 'none', marginBottom: '0' }}>
-        <div className="dev-card" style={{ width: '100%', background: 'var(--card-bg)' }}>
-          <div className="dev-card-header" style={{ color: 'var(--primary)', marginBottom: '5px' }}>
-            <PieChart size={24} />
-            <h3 style={{fontSize: '1.2rem'}}>Centro de Inteligência e Analytics (BI)</h3>
-          </div>
-          <p className="text-muted" style={{ fontSize: '0.85rem', margin: 0 }}>
-            Motor de extração de dados reais do MySQL. Todos os relatórios gerados são registrados na tabela de auditoria para conformidade jurídica.
-          </p>
+        <div className="dev-card glass-card" style={{ width: '100%' }}>
+          <div className="dev-card-header" style={{ color: 'white', marginBottom: '5px' }}><PieChart size={24} color="#38bdf8" /><h3 style={{fontSize: '1.2rem'}}>Centro de Inteligência e Analytics (BI)</h3></div>
+          <p className="text-muted" style={{ fontSize: '0.85rem', margin: 0 }}>Motor de extração de dados reais do banco MySQL. Relatórios são registrados em tabela de auditoria para fins de compliance.</p>
         </div>
       </div>
-
       <div className="bi-grid stagger-2">
         {modulosBI.map(mod => (
-          <div key={mod.id} className="bi-card" style={{ '--theme-color': mod.color }}>
-            <div className="bi-header">
-              <div className="bi-icon-wrapper">
-                <mod.icon size={24} />
-              </div>
-              <div>
-                <h4 className="bi-title">{mod.titulo}</h4>
-                <p className="bi-desc">{mod.desc}</p>
-              </div>
-            </div>
-            
+          <div key={mod.id} className="bi-card glass-card" style={{ '--theme-color': mod.color }}>
+            <div className="bi-header"><div className="bi-icon-wrapper"><mod.icon size={24} /></div><div><h4 className="bi-title" style={{color:'white'}}>{mod.titulo}</h4><p className="bi-desc">{mod.desc}</p></div></div>
             <div className="bi-actions">
-              <button className="btn-bi" onClick={() => gerarRelatorio(mod.id, mod.titulo, mod.color)}>
-                <FileText size={16}/> Gerador PDF Dinâmico
+              <button className="btn-bi" onClick={() => gerarRelatorioPDF(mod.id, mod.titulo, mod.color)} disabled={isProcessing !== null}>
+                {isProcessing === `PDF_${mod.id}` ? <Loader2 size={16} className="spin"/> : <FileText size={16}/>} PDF Dinâmico
               </button>
-              <button className="btn-bi" onClick={() => { showToast('A extração CSV estará disponível na v10.6', 'info'); addLog(`[BI] Tentou exportar CSV: ${mod.id}`, 'warning'); }}>
-                <FileSpreadsheet size={16}/> Exportar CSV
+              <button className="btn-bi" onClick={() => gerarRelatorioCSV(mod.id)} disabled={isProcessing !== null}>
+                {isProcessing === `CSV_${mod.id}` ? <Loader2 size={16} className="spin"/> : <FileSpreadsheet size={16}/>} Tabela CSV
               </button>
             </div>
           </div>
@@ -1029,7 +1237,10 @@ const TelaBI = ({ api, showToast, addLog, sysConfig, filiaisDb }) => {
   );
 };
 
-const TerminalFooter = ({ logs, setLogs, addLog, filiaisDb }) => {
+// ============================================================================
+// 9. TERMINAL FOOTER (COMANDOS REAIS + EASTER EGGS)
+// ============================================================================
+const TerminalFooter = ({ logs, setLogs, addLog, sysConfig }) => {
   const [cmdInput, setCmdInput] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const terminalContainerRef = useRef(null);
@@ -1042,46 +1253,62 @@ const TerminalFooter = ({ logs, setLogs, addLog, filiaisDb }) => {
     e.preventDefault();
     if (!cmdInput.trim()) return;
     const cmd = cmdInput.trim().toLowerCase();
-    addLog(cmd, 'cmd-echo');
+    
+    // Mostra o que o usuário digitou na tela
+    setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: cmd, status: 'cmd-echo' }]);
+    
+    // Simula tempo de processamento
     setTimeout(() => {
       switch (cmd) {
-        case 'help': addLog('Comandos: clear, ping, sysinfo, netstat, reboot, invoice --gen', 'info'); break;
-        case 'clear': setLogs([{ time: new Date().toLocaleTimeString(), text: 'Console limpo.', status: 'info' }]); break;
-        case 'ping': addLog(`Gateway Ping: 14ms.`, 'success'); break;
-        case 'sysinfo': addLog(`TermoSync OS v10.5 | Root Access Granted.`, 'warning'); break;
-        case 'invoice --gen': addLog(`Processamento de CRON JOB de faturamento concluído.`, 'success'); break;
-        default: addLog(`ERR_UNKNOWN_CMD: O comando '${cmd}' não é reconhecido.`, 'error');
+        case 'help': setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: 'Comandos disponíveis: clear, ping, sysinfo, netstat, purge, reboot, whoami, date, lockdown, ifconfig, sudo, matrix', status: 'info' }]); break;
+        case 'clear': setLogs([]); break;
+        case 'ping': setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: 'Gateway Ping: 12ms. Servidor Core: ONLINE.', status: 'success' }]); break;
+        case 'sysinfo': setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: 'TermoSync OS v10.5 Enterprise Edition | Auth: ROOT_DEV.', status: 'warning' }]); break;
+        case 'netstat': setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: 'TCP 0.0.0.0:3000 (LISTEN) | Conexões WebSocket ativas: 3.', status: 'info' }]); break;
+        case 'whoami': setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: 'SuperUser (UID: 0). Permissão Máxima Concedida.', status: 'success' }]); break;
+        case 'date': setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: new Date().toString(), status: 'info' }]); break;
+        case 'ifconfig': setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: 'eth0: inet 192.168.1.100 netmask 255.255.255.0 | lo: inet 127.0.0.1', status: 'info' }]); break;
+        case 'sudo': setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: 'Você já é ROOT. Com grandes poderes vêm grandes responsabilidades.', status: 'warning' }]); break;
+        case 'matrix': 
+            for(let i=0; i<15; i++) {
+                setTimeout(() => setLogs(prev => [...prev, { time: '', text: Array.from({length: 40}, () => String.fromCharCode(33 + Math.random() * 94)).join(''), status: 'success' }]), i * 50);
+            }
+            break;
+        case 'lockdown': setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: sysConfig?.maintenanceMode ? 'Sistema já está em LOCKDOWN.' : 'Para ativar o Lockdown Crítico, utilize a Interface Gráfica na aba Sistema.', status: 'warning' }]); break;
+        case 'purge': setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: 'Limpando cache de memória RAM L3... [OK]', status: 'success' }]); break;
+        case 'reboot': 
+          setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: 'Reiniciando painel (F5)...', status: 'error' }]); 
+          setTimeout(() => window.location.reload(), 1500); 
+          break;
+        default: setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('pt-BR'), text: `ERR: '${cmd}' não reconhecido. Digite 'help' para comandos válidos.`, status: 'error' }]);
       }
     }, 400);
-    setCmdInput('');
+    setCmdInput(''); 
   };
 
   return (
     <div className={`os-terminal-footer ${isOpen ? 'open' : 'closed'}`}>
-      <div className="terminal-header" onClick={() => setIsOpen(!isOpen)} style={{ cursor: 'pointer' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Terminal size={14} color="var(--primary)" />
-          <span>{isOpen ? '/dev/tty1 (INTERACTIVE SHELL)' : 'Abrir Linha de Comandos (Terminal)'}</span>
+      <div className="terminal-header" onClick={() => setIsOpen(!isOpen)}>
+        <div className="terminal-header-title">
+          <TerminalSquare size={16} />
+          <span>{isOpen ? '/dev/tty1 (INTERACTIVE ROOT SHELL)' : 'Abrir Terminal do Servidor (ROOT)'}</span>
         </div>
-        <div className="terminal-actions">
-          {isOpen ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
-        </div>
+        {isOpen ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
       </div>
-
       {isOpen && (
         <>
-          <div className="terminal-body" ref={terminalContainerRef}>
+          <div className="terminal-body crt-terminal" ref={terminalContainerRef}>
             {logs.map((log, index) => (
               <div key={index} className={`terminal-line ${log.status}`}>
-                <span className="time">[{log.time}]</span>
-                {log.status === 'cmd-echo' ? (<span className="prompt">root@termosync:~$ <span className="echo-text">{log.text}</span></span>) : (<><span className="prompt">root@termosync:~$</span> <span className="text">{log.text}</span></>)}
+                <span className="time">{log.time && `[${log.time}]`}</span>
+                {log.status === 'cmd-echo' ? (<span className="prompt">root@termosync:~$ <span style={{color: 'white'}}>{log.text}</span></span>) : (<><span className="prompt" style={{visibility: log.time ? 'visible' : 'hidden'}}>root@termosync:~$</span> <span className="text">{log.text}</span></>)}
               </div>
             ))}
           </div>
           <form onSubmit={handleCommandSubmit} className="terminal-input-form">
             <span className="prompt">root@termosync:~$</span>
             <input type="text" value={cmdInput} onChange={e => setCmdInput(e.target.value)} placeholder="Digite um comando (ex: help)..." autoComplete="off" spellCheck="false" autoFocus />
-            <button type="button" className="btn-clear-terminal" onClick={() => setLogs([])} title="Limpar Console"><Eraser size={14} /></button>
+            <button type="button" className="btn-clear-terminal" onClick={() => setLogs([])} title="Limpar Console"><Eraser size={16} /></button>
           </form>
         </>
       )}

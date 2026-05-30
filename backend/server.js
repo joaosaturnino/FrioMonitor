@@ -169,6 +169,42 @@ const verificarToken = async (req, res, next) => {
   });
 };
 
+// ============================================================================
+// ROTA EXCLUSIVA DO PAINEL DEV: EXPORTAÇÃO DE DADOS (DUMP)
+// ============================================================================
+app.post('/api/system/exportar-tabela', async (req, res) => {
+  try {
+    let { tabela } = req.body;
+    
+    // Ajuste fino: Se o frontend pedir 'leituras_telemetria', apontamos para a tabela real 'leituras' que você criou no seu SQL.
+    if (tabela === 'leituras_telemetria') {
+      tabela = 'leituras';
+    }
+    
+    // Lista de segurança (Whitelist) para impedir SQL Injection
+    const tabelasPermitidas = [
+      'equipamentos', 'leituras', 'usuarios', 
+      'notificacoes', 'audit_logs', 'sessoes_ativas', 
+      'empresas', 'chamados', 'hardware_iot'
+    ];
+
+    if (!tabelasPermitidas.includes(tabela)) {
+      return res.status(400).json({ error: 'Tentativa de acesso a tabela não autorizada.' });
+    }
+
+    // ATENÇÃO: Certifique-se de que sua conexão MySQL se chama 'pool' neste arquivo.
+    // Se for 'db' ou 'conexao', mude abaixo:
+    const [linhas] = await pool.query(`SELECT * FROM ${tabela}`);
+    
+    // Retorna os dados em formato JSON para o React transformar em CSV
+    res.json({ sucesso: true, dados: linhas });
+    
+  } catch (erro) {
+    console.error(`[ERRO MYSQL] Falha na extração da tabela ${req.body.tabela}:`, erro);
+    res.status(500).json({ error: 'Falha interna do servidor ao gerar o arquivo.' });
+  }
+});
+
 /* --- ROTAS BÁSICAS MANTIDAS --- */
 app.get('/api/empresas', verificarToken, async (req, res) => { if (req.userRole !== 'DEV') return res.status(403).send(); try { const [r] = await pool.execute('SELECT * FROM empresas ORDER BY nome ASC'); res.json(r); } catch (e) { res.status(500).send(); } });
 app.post('/api/empresas', verificarToken, async (req, res) => { if (req.userRole !== 'DEV') return res.status(403).send(); try { await pool.execute('INSERT INTO empresas (nome, cnpj, contato, email, status) VALUES (?, ?, ?, ?, ?)', [req.body.nome, req.body.cnpj || null, req.body.contato || null, req.body.email || null, req.body.status || 'Ativa']); res.status(201).send(); } catch (e) { res.status(500).send(); } });
@@ -350,6 +386,18 @@ app.post('/api/leituras', verificarToken, async (req, res) => {
   } catch (error) { res.status(500).send(); }
 });
 
+// No seu server.js
+app.post('/api/leituras', async (req, res) => {
+  try {
+    // Verifica se o sistema está em modo manutenção (Lockdown)
+    const [sys] = await pool.execute('SELECT valor FROM configuracoes WHERE chave = "maintenanceMode"');
+    if (sys.length > 0 && sys[0].valor === '1') {
+      return res.status(503).json({ error: 'Sistema em Manutenção. Operações offline.' });
+    }
+    
+  } catch (error) { res.status(500).send(); }
+});
+
 app.get('/api/system/health', verificarToken, async (req, res) => {
   if (req.userRole !== 'DEV') return res.status(403).send();
   try {
@@ -416,6 +464,78 @@ app.post('/api/system/reports/log', verificarToken, async (req, res) => {
     );
     res.status(201).send();
   } catch (e) { res.status(500).send(); }
+});
+
+// ============================================================================
+// ROTA DO KANBAN ITSM: MOVER TICKET DE COLUNA (ATUALIZAR STATUS)
+// ============================================================================
+// ============================================================================
+// ROTA DO KANBAN ITSM: MOVER TICKET DE COLUNA (ATUALIZAR STATUS)
+// ============================================================================
+// ============================================================================
+// ROTA DO KANBAN ITSM: MOVER TICKET DE COLUNA (ATUALIZAR STATUS)
+// ============================================================================
+// ============================================================================
+// GESTÃO DE CHAMADOS (ITSM KANBAN) - 🔥 TOTALMENTE CORRIGIDO E BLINDADO
+// ============================================================================
+app.get('/api/chamados', verificarToken, async (req, res) => { 
+  let q = `SELECT c.*, e.nome as equipamento_nome, u.usuario as aberto_por FROM chamados c LEFT JOIN equipamentos e ON c.equipamento_id = e.id LEFT JOIN usuarios u ON c.usuario_id = u.id WHERE 1=1`; 
+  const p = []; 
+  if (req.userRole !== 'DEV') { q += ' AND c.empresa = ?'; p.push(req.userEmpresa); if (req.userRole === 'LOJA') { q += ` AND c.filial = ?`; p.push(req.userFilial); } } 
+  const [r] = await pool.execute(q + ' ORDER BY c.data_abertura DESC', p); 
+  res.json(r); 
+});
+
+app.post('/api/chamados', verificarToken, async (req, res) => { 
+  try { 
+    const { equipamento_id, descricao, solicitante_nome, tecnico_responsavel } = req.body; 
+    let filialStr = null;
+    try { const [eq] = await pool.execute('SELECT filial FROM equipamentos WHERE id=?', [equipamento_id]); if(eq.length > 0) filialStr = eq[0].filial; } catch(e){}
+    
+    await pool.execute(`INSERT INTO chamados (equipamento_id, usuario_id, filial, descricao, solicitante_nome, tecnico_responsavel, empresa, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'Aberto')`, [equipamento_id || null, req.userId, filialStr, descricao, solicitante_nome || null, tecnico_responsavel || null, req.userEmpresa]); 
+    io.emit('atualizacao_dados'); 
+    res.status(201).send(); 
+  } catch (error) { res.status(500).send(); } 
+});
+
+// ============================================================================
+// ROTA DO KANBAN ITSM: MOVER TICKET DE COLUNA (ATUALIZAR STATUS)
+// ============================================================================
+app.put('/api/chamados/:id/status', verificarToken, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ error: 'Status ausente.' });
+
+    let query = 'UPDATE chamados SET status = ?';
+    let params = [status];
+
+    // Se o técnico moveu para "Concluído", salvamos a hora exata na coluna data_conclusao
+    if (status === 'Concluído') {
+       query += ', data_conclusao = CURRENT_TIMESTAMP';
+    } else {
+       // Se ele puxou de volta para andamento, limpamos a data de conclusão
+       query += ', data_conclusao = NULL';
+    }
+
+    query += ' WHERE id = ?';
+    params.push(req.params.id);
+
+    // Executa a alteração no MySQL
+    await pool.execute(query, params);
+    
+    // Atualiza a tela de todo mundo em tempo real
+    io.emit('atualizacao_dados');
+    res.status(200).json({ success: true, message: `Status alterado para ${status}` });
+
+  } catch (error) {
+    console.error(`\n❌ [ERRO KANBAN] Falha no banco de dados:`, error.message);
+    res.status(500).json({ error: 'Falha no banco de dados ao mover o card.' });
+  }
+});
+
+app.delete('/api/chamados/:id', verificarToken, async (req, res) => { 
+  if (req.userRole !== 'ADMIN' && req.userRole !== 'DEV') return res.status(403).send(); 
+  try { await pool.execute('DELETE FROM chamados WHERE id=?', [req.params.id]); io.emit('atualizacao_dados'); res.status(200).send(); } catch (error) { res.status(500).send(); } 
 });
 
 server.listen(PORT, '0.0.0.0', () => { console.log(`Backend online na porta ${PORT}. Motor Multi-Tenant SaaS Ativo.`); });

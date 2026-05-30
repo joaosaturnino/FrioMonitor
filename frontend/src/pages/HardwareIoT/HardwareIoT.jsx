@@ -1,14 +1,39 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Cpu, Wifi, Activity, Terminal, RefreshCw, Server, Power, Radio, Search, ServerCrash, Zap } from 'lucide-react';
+import { 
+  Cpu, Activity, RefreshCw, Server, Power, Search, MapPin, 
+  Loader2, Zap, ServerCrash, TerminalSquare 
+} from 'lucide-react';
 import axios from 'axios';
 import './HardwareIoT.css';
 
+// Sub-componente: Renderiza graficamente a força do sinal Wi-Fi
+const WifiBars = ({ dbm, isOffline }) => {
+  let signalLevel = 'signal-offline';
+  if (!isOffline) {
+    if (dbm > -60) signalLevel = 'signal-excellent';
+    else if (dbm > -70) signalLevel = 'signal-good';
+    else if (dbm > -80) signalLevel = 'signal-weak';
+    else signalLevel = 'signal-bad';
+  }
+
+  return (
+    <div className={`wifi-bars-container ${signalLevel}`} title={isOffline ? 'Desconectado' : `${dbm} dBm`}>
+      <div className="wifi-bar"></div>
+      <div className="wifi-bar"></div>
+      <div className="wifi-bar"></div>
+      <div className="wifi-bar"></div>
+    </div>
+  );
+};
+
 export default function HardwareIoT({ equipamentos, showToast, isOffline }) {
-  
   const [hwNodes, setHwNodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // UX: Armazena o ID do nó que está a executar OTA ou Reboot
+  const [actionLoading, setActionLoading] = useState({ id: null, type: null });
 
   const carregarHardware = async (isManual = false) => {
     if (isManual) setIsRefreshing(true);
@@ -21,21 +46,15 @@ export default function HardwareIoT({ equipamentos, showToast, isOffline }) {
       const agora = new Date().getTime();
       
       const formatado = resposta.data.map(eq => {
-        // Verifica se a última comunicação foi há mais de 3 minutos (180.000 ms)
+        // SLA: Considera offline se sem heartbeat > 3 minutos (180.000 ms)
         const tempoDesdeUltimoSinal = eq.ultima_comunicacao ? (agora - new Date(eq.ultima_comunicacao).getTime()) : 999999999;
         const isNodeOffline = tempoDesdeUltimoSinal > 180000;
         
-        let signalClass = 'signal-excellent';
-        if (eq.signal_dbm < -70) signalClass = 'signal-weak';
-        else if (eq.signal_dbm < -60) signalClass = 'signal-good';
-        if (eq.signal_dbm < -80) signalClass = 'signal-bad';
-
         return {
           ...eq,
           mac: eq.mac || '00:00:00:00:00:00',
           ip: eq.ip || '0.0.0.0',
           signal: eq.signal_dbm || -100,
-          signalClass,
           uptime: eq.uptime || '0h',
           fwVersion: eq.fwVersion || 'v1.0.0',
           isNodeOffline
@@ -44,12 +63,12 @@ export default function HardwareIoT({ equipamentos, showToast, isOffline }) {
       
       setHwNodes(formatado);
     } catch (error) {
-      showToast('Erro de sincronização com os Edge Nodes.', 'error');
+      showToast('Erro de sincronização com os clusters Edge.', 'error');
     } finally {
       setLoading(false);
       if (isManual) {
         setTimeout(() => setIsRefreshing(false), 500);
-        showToast('Varredura de rede concluída.', 'success');
+        showToast('Varredura de sub-rede concluída.', 'success');
       }
     }
   };
@@ -57,7 +76,7 @@ export default function HardwareIoT({ equipamentos, showToast, isOffline }) {
   useEffect(() => {
     if (!isOffline) {
       carregarHardware();
-      const interval = setInterval(carregarHardware, 10000); // Polling a cada 10s
+      const interval = setInterval(carregarHardware, 10000); // Polling (Heartbeat verification)
       return () => clearInterval(interval);
     } else {
       setLoading(false);
@@ -76,131 +95,172 @@ export default function HardwareIoT({ equipamentos, showToast, isOffline }) {
 
   const kpis = useMemo(() => {
     const total = hwNodes.length;
-    let online = 0;
-    let offline = 0;
-    hwNodes.forEach(n => {
-      if (n.isNodeOffline) offline++;
-      else online++;
-    });
+    let online = 0; let offline = 0;
+    hwNodes.forEach(n => { if (n.isNodeOffline) offline++; else online++; });
     return { total, online, offline };
   }, [hwNodes]);
 
-  const handleReboot = (nome) => {
-    if (isOffline) return showToast('Control Plane Offline. Comando abortado.', 'error');
-    showToast(`Sinal SIGTERM enviado. Reiniciando nó ${nome}...`, 'warning');
-  };
-
-  const handleOTA = (nome) => {
-    if (isOffline) return showToast('Control Plane Offline. Comando abortado.', 'error');
-    showToast(`Iniciando injeção de Firmware (OTA Flash) no nó ${nome}.`, 'info');
+  // Ações Táticas Simuladas (Reboot & Flash)
+  const executarAcaoNoHardware = async (idNode, nome, tipo) => {
+    if (isOffline) return showToast('Control Plane Offline. Canal MQTT inacessível.', 'error');
+    
+    setActionLoading({ id: idNode, type: tipo });
+    showToast(`Estabelecendo handshake TCP com ${nome}...`, 'info');
+    
+    // Simula o tempo de latência de uma rede IoT Real
+    setTimeout(() => {
+      setActionLoading({ id: null, type: null });
+      if (tipo === 'REBOOT') {
+        showToast(`[SIGTERM] Sucesso. Nó ${nome} está reiniciando.`, 'warning');
+      } else {
+        showToast(`[OTA] Novo Firmware injetado na ROM de ${nome}.`, 'success');
+      }
+    }, 2500);
   };
 
   return (
-    <div className="anim-fade-in stagger-1">
+    <div className="hardware-wrapper">
       
-      {/* HEADER & SEARCH */}
+      {/* HEADER TÁTICO & SEARCH BARS */}
       <div className="edge-header-actions">
         <div>
-          <h3 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
-            <Server style={{ marginRight: '10px', color: 'var(--secondary)' }}/> Gestão de Edge Computing
+          <h3 className="edge-title-modern">
+            <div className="icon-box-primary"><Server size={24} /></div>
+            Gestão de Edge Computing
           </h3>
-          <p className="text-muted" style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>
-            Monitoramento de infraestrutura de borda (Sensores ESP32/Arduino).
+          <p className="text-muted" style={{ margin: '8px 0 0 0', fontSize: '0.9rem' }}>
+            Monitoramento Gêmeo Digital (Digital Twin) e envio de payloads MQTT para o hardware.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div className="search-box-edge">
-            <Search size={16} color="var(--text-muted)" />
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <div className="search-modern">
+            <Search size={18} color="var(--text-muted)" style={{marginRight: '8px'}} />
             <input type="text" placeholder="Filtrar IP, MAC ou Nome..." value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
-          <button className="btn btn-outline" onClick={() => carregarHardware(true)} title="Forçar Varredura de Rede" style={{ padding: '8px 12px' }}>
-            <RefreshCw size={18} className={isRefreshing ? 'spinner' : ''} />
+          <button className="btn btn-primary" onClick={() => carregarHardware(true)} disabled={isOffline} style={{padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold'}}>
+            {isRefreshing ? <Loader2 size={18} className="spin" /> : <RefreshCw size={18} />} SCAN
           </button>
         </div>
       </div>
 
-      {/* KPI BAR */}
-      <div className="edge-kpi-bar stagger-2">
-        <div className="kpi-item total">
-          <div className="kpi-icon"><Cpu size={22}/></div>
-          <div className="kpi-data"><span className="kpi-value">{kpis.total}</span><span className="kpi-label">Nós Provisionados</span></div>
+      {/* KPI GLASSMORPHISM BAR */}
+      <div className="edge-kpi-bar">
+        <div className="kpi-card-modern info">
+          <div style={{color: '#38bdf8', background: 'rgba(56, 189, 248, 0.1)', padding: '12px', borderRadius: '12px'}}>
+            <Cpu size={28}/>
+          </div>
+          <div className="kpi-text-box">
+            <span className="kpi-value-modern">{kpis.total}</span>
+            <span className="kpi-label-modern">Nós End-Point</span>
+          </div>
         </div>
-        <div className="kpi-item success">
-          <div className="kpi-icon"><Zap size={22}/></div>
-          <div className="kpi-data"><span className="kpi-value" style={{color: 'var(--success)'}}>{kpis.online}</span><span className="kpi-label">Telemetria Ativa</span></div>
+        
+        <div className="kpi-card-modern success">
+          <div style={{color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '12px'}}>
+            <Zap size={28}/>
+          </div>
+          <div className="kpi-text-box">
+            <span className="kpi-value-modern">{kpis.online}</span>
+            <span className="kpi-label-modern">Telemetria Ativa</span>
+          </div>
         </div>
-        <div className="kpi-item danger">
-          <div className="kpi-icon"><ServerCrash size={22}/></div>
-          <div className="kpi-data"><span className="kpi-value" style={{color: 'var(--danger)'}}>{kpis.offline}</span><span className="kpi-label">Falhas de Conexão</span></div>
+        
+        <div className="kpi-card-modern danger">
+          <div style={{color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '12px', borderRadius: '12px'}}>
+            <ServerCrash size={28}/>
+          </div>
+          <div className="kpi-text-box">
+            <span className="kpi-value-modern">{kpis.offline}</span>
+            <span className="kpi-label-modern">Sinal Interrompido</span>
+          </div>
         </div>
       </div>
 
-      {/* NODE GRID */}
-      <div className="iot-fleet-grid stagger-3">
+      {/* NÓS DA REDE (DIGITAL TWINS) */}
+      <div className="iot-fleet-grid">
         {loading ? (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-             <RefreshCw size={32} className="spinner" style={{ opacity: 0.5, marginBottom: '1rem' }} />
-             <p>Mapeando topologia de rede...</p>
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '5rem', color: 'var(--text-muted)' }}>
+             <Loader2 size={48} className="spin" style={{ opacity: 0.5, margin: '0 auto 1.5rem auto', display: 'block', color: 'var(--primary)' }} />
+             <p style={{ fontWeight: 'bold', letterSpacing: '1px' }}>Sincronizando Twin Digital com Cluster MQTT...</p>
           </div>
         ) : nodesFiltrados.map(node => (
           <div key={node.id} className={`iot-node-card ${node.isNodeOffline ? 'card-offline' : 'card-online'}`}>
             
+            {/* OVERLAY DE LOADING APLICADO AO CARD INDIVIDUAL */}
+            {actionLoading.id === node.id && (
+              <div className="node-overlay-loading">
+                <Loader2 size={36} className="spin" />
+                <span>{actionLoading.type === 'REBOOT' ? 'INICIANDO COLD BOOT...' : 'FLASHING ROM (OTA)...'}</span>
+              </div>
+            )}
+
             <div className="node-header">
               <div className="node-ident">
-                <div className="node-icon">
-                  <Server size={22} />
-                </div>
+                <Cpu size={36} className="hw-icon" />
                 <div>
                   <div className="node-name">{node.nome}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Radio size={12}/> {node.filial}
+                  <div className="node-location">
+                    <MapPin size={12}/> {node.filial || 'Matriz Core'}
                   </div>
                 </div>
               </div>
-              <div className={`node-status ${node.isNodeOffline ? 'status-offline' : 'status-online'}`}>
-                <Activity size={12} className={!node.isNodeOffline ? 'pulse-danger-icon' : ''} />
-                {node.isNodeOffline ? 'OFFLINE' : 'ONLINE'}
+              <div className="node-status-box">
+                 <div className={`status-led ${node.isNodeOffline ? 'led-offline' : 'led-online'}`}></div>
+                 <div className={`node-status ${node.isNodeOffline ? 'status-offline' : 'status-online'}`}>
+                   {node.isNodeOffline ? 'OFFLINE' : 'ONLINE'}
+                 </div>
               </div>
             </div>
 
             <div className="node-specs">
               <div className="spec-item">
-                <span className="spec-label">Endereço IPv4 (LAN)</span>
-                <span className="spec-value">{node.ip}</span>
+                <span className="spec-label">Endereço IPv4 (WLAN)</span>
+                <span className="spec-value" style={{color: '#38bdf8'}}>{node.ip}</span>
               </div>
               <div className="spec-item">
                 <span className="spec-label">Endereço MAC Físico</span>
                 <span className="spec-value">{node.mac}</span>
               </div>
               <div className="spec-item">
-                <span className="spec-label">Sinal Wi-Fi (RSSI)</span>
-                <span className={`spec-value wifi-signal ${node.signalClass}`}>
-                  <Wifi size={12} /> {node.signal} dBm
+                <span className="spec-label">Sinal Rádio (WIFI)</span>
+                <span className="spec-value">
+                  <WifiBars dbm={node.signal} isOffline={node.isNodeOffline} />
+                  {node.isNodeOffline ? 'DROP' : `${node.signal} dBm`}
                 </span>
               </div>
               <div className="spec-item">
-                <span className="spec-label">Tempo em Execução</span>
-                <span className="spec-value">{node.isNodeOffline ? 'N/A' : node.uptime}</span>
+                <span className="spec-label">Tempo Ativo (Uptime)</span>
+                <span className="spec-value">{node.isNodeOffline ? 'ERR_TIMEOUT' : node.uptime}</span>
               </div>
               <div className="spec-item">
-                <span className="spec-label">Kernel / Firmware</span>
-                <span className="spec-value" style={{ color: 'var(--secondary)', background: 'rgba(56, 189, 248, 0.05)' }}>{node.fwVersion}</span>
+                <span className="spec-label">Versão ROM (OTA)</span>
+                <span className="spec-value" style={{ color: '#10b981' }}>{node.fwVersion}</span>
               </div>
               <div className="spec-item">
-                <span className="spec-label">Último Heartbeat</span>
-                <span className="spec-value" style={{color: node.isNodeOffline ? 'var(--danger)' : 'inherit', background: node.isNodeOffline ? 'rgba(239, 68, 68, 0.05)' : ''}}>
-                  {node.ultima_comunicacao ? new Date(node.ultima_comunicacao).toLocaleTimeString() : 'Desconhecido'}
+                <span className="spec-label">Último Heartbeat (PONG)</span>
+                <span className="spec-value" style={{color: node.isNodeOffline ? '#ef4444' : 'inherit'}}>
+                  {node.ultima_comunicacao ? new Date(node.ultima_comunicacao).toLocaleTimeString('pt-BR') : 'Sem registo'}
                 </span>
               </div>
             </div>
 
             <div className="node-actions">
-              <button className="btn-node btn-reboot" onClick={() => handleReboot(node.nome)} title="Forçar reinício a quente">
-                <Power size={14} /> REINICIAR (SIGTERM)
+              <button 
+                className="btn-node btn-reboot" 
+                onClick={() => executarAcaoNoHardware(node.id, node.nome, 'REBOOT')} 
+                title="Forçar reinício via MQTT"
+                disabled={actionLoading.id !== null || node.isNodeOffline}
+              >
+                <Power size={14} /> REBOOT SIGTERM
               </button>
-              <button className="btn-node btn-ota" onClick={() => handleOTA(node.nome)} title="Enviar pacote de atualização">
-                <RefreshCw size={14} /> INJETAR FIRMWARE
+              <button 
+                className="btn-node btn-ota" 
+                onClick={() => executarAcaoNoHardware(node.id, node.nome, 'OTA')} 
+                title="Descarregar novo firmware via OTA"
+                disabled={actionLoading.id !== null || node.isNodeOffline}
+              >
+                <RefreshCw size={14} /> INJETAR OTA
               </button>
             </div>
 
@@ -208,10 +268,10 @@ export default function HardwareIoT({ equipamentos, showToast, isOffline }) {
         ))}
 
         {!loading && nodesFiltrados.length === 0 && (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-            <Terminal size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
-            <p style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Nenhum nó de telemetria localizado.</p>
-            <p style={{ fontSize: '0.85rem' }}>Verifique os filtros de busca ou a conectividade do gateway.</p>
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '5rem', color: 'var(--text-muted)' }}>
+            <TerminalSquare size={56} style={{ opacity: 0.2, margin: '0 auto 1.5rem auto', display: 'block' }} />
+            <p style={{ fontSize: '1.2rem', fontWeight: '900', color: 'white' }}>Nenhum Nó Edge localizado.</p>
+            <p style={{ fontSize: '0.9rem' }}>Verifique as regras de Firewall ou a integridade do Broker MQTT.</p>
           </div>
         )}
       </div>
